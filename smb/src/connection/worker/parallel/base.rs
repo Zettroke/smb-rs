@@ -10,8 +10,8 @@ use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    msg_handler::{IncomingMessage, OutgoingMessage, SendMessageResult},
     Error,
+    msg_handler::{IncomingMessage, OutgoingMessage, SendMessageResult},
 };
 
 use super::backend_trait::MultiWorkerBackend;

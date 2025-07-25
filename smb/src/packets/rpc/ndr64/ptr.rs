@@ -187,7 +187,7 @@ where
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Resolved(ref value) => value,
+            Self::Resolved(value) => value,
             Self::RefIdRead(_) => panic!("Cannot deref on a pointer that is in RefIdRead state"),
             Self::Uninit => panic!("Cannot deref on an uninitialized pointer"),
         }
@@ -200,7 +200,7 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::Resolved(ref mut value) => value,
+            Self::Resolved(value) => value,
             _ => panic!("Cannot deref_mut on an uninitialized or unresolved pointer"),
         }
     }

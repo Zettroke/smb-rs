@@ -114,7 +114,7 @@ pub use impls::*;
 mod copy {
     use super::*;
 
-    use std::sync::{atomic::AtomicU64, Arc};
+    use std::sync::{Arc, atomic::AtomicU64};
 
     #[derive(Debug)]
     struct CopyState {
@@ -269,8 +269,8 @@ mod copy {
             let bytes_read = from.read_at(&mut curr_chunk[..chunk_size], offset).await?;
             if bytes_read < chunk_size {
                 log::warn!(
-                "Task {task_id}: Read less bytes than expected. File might be corrupt. Expected: {chunk_size}, Read: {bytes_read}"
-            );
+                    "Task {task_id}: Read less bytes than expected. File might be corrupt. Expected: {chunk_size}, Read: {bytes_read}"
+                );
             }
             let valid_chunk_end = bytes_read;
             to.write_at(&curr_chunk[..valid_chunk_end], offset).await?;

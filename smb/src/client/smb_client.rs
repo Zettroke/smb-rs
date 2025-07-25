@@ -3,13 +3,13 @@ use std::{collections::HashMap, str::FromStr};
 use maybe_async::maybe_async;
 
 use crate::{
+    Connection, Error, FileCreateArgs, Resource, Session, Tree,
     packets::{
         dfsc::{ReferralEntry, ReferralEntryValue},
         rpc::interface::{ShareInfo1, SrvSvc},
         smb2::Status,
     },
     resource::Pipe,
-    Connection, Error, FileCreateArgs, Resource, Session, Tree,
 };
 
 use super::{config::ClientConfig, unc_path::UncPath};

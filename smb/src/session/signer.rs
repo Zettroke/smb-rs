@@ -3,7 +3,7 @@
 use binrw::prelude::*;
 use std::io::Cursor;
 
-use crate::{crypto, packets::smb2::header::Header, Error};
+use crate::{Error, crypto, packets::smb2::header::Header};
 
 /// A struct for writing and verifying SMB message signatures.
 ///

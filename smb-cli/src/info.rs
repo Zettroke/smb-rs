@@ -5,9 +5,9 @@ use futures_util::StreamExt;
 use maybe_async::*;
 use smb::resource::{GetLen, ResourceHandle};
 use smb::{
+    Client, FileCreateArgs, UncPath,
     packets::{fscc::*, smb2::AdditionalInfo},
     resource::{Directory, Resource},
-    Client, FileCreateArgs, UncPath,
 };
 use std::{error::Error, sync::Arc};
 

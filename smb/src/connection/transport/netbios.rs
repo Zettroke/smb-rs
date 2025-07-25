@@ -1,11 +1,11 @@
 use std::{io::Cursor, time::Duration};
 
-use super::{tcp::TcpTransport, SmbTransport, SmbTransportRead, SmbTransportWrite};
+use super::{SmbTransport, SmbTransportRead, SmbTransportWrite, tcp::TcpTransport};
 use crate::{
+    Error,
     packets::netbios::{
         NBSSPacketHeader, NBSSPacketType, NBSSTrailer, NBSessionRequest, NetBiosName,
     },
-    Error,
 };
 use binrw::{BinRead, BinWrite};
 #[cfg(feature = "async")]

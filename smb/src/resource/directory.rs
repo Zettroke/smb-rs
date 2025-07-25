@@ -2,8 +2,8 @@ use super::ResourceHandle;
 use crate::msg_handler::{MessageHandler, ReceiveOptions};
 use crate::sync_helpers::Mutex;
 use crate::{
-    packets::{fscc::*, smb2::*},
     Error,
+    packets::{fscc::*, smb2::*},
 };
 use maybe_async::*;
 use std::ops::{Deref, DerefMut};

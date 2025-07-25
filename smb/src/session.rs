@@ -7,6 +7,7 @@ use crate::connection::connection_info::ConnectionInfo;
 use crate::connection::worker::Worker;
 use crate::sync_helpers::*;
 use crate::{
+    Error,
     connection::ConnectionMessageHandler,
     crypto::KeyToDerive,
     msg_handler::{
@@ -15,7 +16,6 @@ use crate::{
     },
     packets::smb2::*,
     tree::Tree,
-    Error,
 };
 use binrw::prelude::*;
 use maybe_async::*;
@@ -63,7 +63,7 @@ impl Session {
             AuthenticationStep::Complete => {
                 return Err(Error::InvalidState(
                     "Authentication completed before session setup.".to_string(),
-                ))
+                ));
             }
         };
         let request =

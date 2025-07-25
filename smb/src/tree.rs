@@ -9,6 +9,7 @@ use crate::resource::FileCreateArgs;
 use crate::sync_helpers::*;
 
 use crate::{
+    Error,
     msg_handler::{HandlerReference, MessageHandler},
     packets::{
         fscc::FileAccessMask,
@@ -19,7 +20,6 @@ use crate::{
     },
     resource::Resource,
     session::SessionMessageHandler,
-    Error,
 };
 mod dfs_tree;
 pub use dfs_tree::*;

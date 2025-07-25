@@ -13,7 +13,7 @@ use super::{
 };
 use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
-use quinn::{crypto::rustls::QuicClientConfig, Endpoint};
+use quinn::{Endpoint, crypto::rustls::QuicClientConfig};
 use rustls::pki_types::CertificateDer;
 use rustls_platform_verifier::ConfigVerifierExt;
 

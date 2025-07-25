@@ -1,17 +1,17 @@
 #![cfg(not(feature = "single_threaded"))]
 use serial_test::serial;
 use smb::{
+    ConnectionConfig, FileCreateArgs,
     connection::EncryptionMode,
     packets::{fscc::*, smb2::NotifyFilter},
     resource::Resource,
     sync_helpers::*,
-    ConnectionConfig, FileCreateArgs,
 };
 use std::sync::Arc;
 mod common;
 
-use common::make_server_connection;
 use common::TestConstants;
+use common::make_server_connection;
 const NEW_FILE_NAME_UNDER_WORKDIR: &str = "test_file.txt";
 
 #[test_log::test(maybe_async::test(

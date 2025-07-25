@@ -1,5 +1,5 @@
 use binrw::io::Write;
-use binrw::{prelude::*, Endian};
+use binrw::{Endian, prelude::*};
 use core::fmt::{self, Write as _};
 use std::{io::prelude::*, string::FromUtf16Error};
 

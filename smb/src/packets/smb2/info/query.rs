@@ -1,6 +1,6 @@
 //! Get/Set Info Request/Response
 
-use crate::packets::security::{SecurityDescriptor, SID};
+use crate::packets::security::{SID, SecurityDescriptor};
 use crate::packets::smb2::FileId;
 use crate::query_info_data;
 use binrw::{io::TakeSeekExt, prelude::*};
@@ -263,10 +263,12 @@ mod tests {
             ]
             .into(),
             data: GetInfoRequestData::EaInfo(GetEaInfoList {
-                values: vec![FileGetEaInformationInner {
-                    ea_name: "$MpEa_D262AC624451295".into(),
-                }
-                .into()],
+                values: vec![
+                    FileGetEaInformationInner {
+                        ea_name: "$MpEa_D262AC624451295".into(),
+                    }
+                    .into(),
+                ],
             }),
             output_buffer_length: 554,
         };

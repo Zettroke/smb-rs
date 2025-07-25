@@ -136,8 +136,8 @@ mod gmac_signer {
 
     use aes::Aes128;
     use aes_gcm::{
-        aead::{AeadMutInPlace, KeyInit},
         Aes128Gcm, Key,
+        aead::{AeadMutInPlace, KeyInit},
     };
     use binrw::prelude::*;
     use modular_bitfield::prelude::*;

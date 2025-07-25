@@ -4,13 +4,13 @@ use maybe_async::*;
 use time::PrimitiveDateTime;
 
 use crate::{
+    Error,
     connection::connection_info::ConnectionInfo,
     msg_handler::{
         HandlerReference, IncomingMessage, MessageHandler, OutgoingMessage, ReceiveOptions,
     },
     packets::{fscc::*, security::SecurityDescriptor, smb2::*},
     tree::TreeMessageHandler,
-    Error,
 };
 
 pub mod directory;
@@ -141,7 +141,9 @@ impl Resource {
         let access = match CreateContextRespData::first_mxac(&response.create_contexts) {
             Some(response) => response.maximal_access,
             _ => {
-                log::debug!("No maximal access context found for file '{name}', using default (full access).");
+                log::debug!(
+                    "No maximal access context found for file '{name}', using default (full access)."
+                );
                 FileAccessMask::from_bytes(u32::MAX.to_be_bytes())
             }
         };

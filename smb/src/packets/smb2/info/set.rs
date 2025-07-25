@@ -3,7 +3,7 @@
 use crate::packets::smb2::FileId;
 use crate::{packets::security::SecurityDescriptor, query_info_data};
 
-use super::{common::*, NullByte, QueryQuotaInfo};
+use super::{NullByte, QueryQuotaInfo, common::*};
 use crate::packets::{binrw_util::prelude::*, fscc::*};
 use binrw::io::TakeSeekExt;
 use binrw::prelude::*;

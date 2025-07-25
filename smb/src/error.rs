@@ -3,10 +3,10 @@ use std::{num::TryFromIntError, sync::PoisonError};
 use thiserror::Error;
 
 use crate::{
+    UncPath,
     connection::TransformError,
     packets::smb2::{Command, ErrorResponse, NegotiateDialect, Status},
     sync_helpers::AcquireError,
-    UncPath,
 };
 
 #[derive(Error, Debug)]

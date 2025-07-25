@@ -2,11 +2,11 @@ use crate::{
     connection::transport::{SmbTransport, SmbTransportRead, SmbTransportWrite},
     sync_helpers::*,
 };
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
-use crate::{msg_handler::IncomingMessage, Error};
+use crate::{Error, msg_handler::IncomingMessage};
 
 use super::{backend_trait::MultiWorkerBackend, base::ParallelWorker};
 

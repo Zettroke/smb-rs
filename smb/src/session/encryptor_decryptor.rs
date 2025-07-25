@@ -1,13 +1,13 @@
 //! SMB Message encryption/decryption implementation.
 
 use binrw::prelude::*;
-use rand::rngs::OsRng;
 use rand::RngCore;
+use rand::rngs::OsRng;
 use std::io::Cursor;
 
 use crate::{
     crypto,
-    packets::smb2::{encrypted::*, Response},
+    packets::smb2::{Response, encrypted::*},
 };
 
 #[derive(Debug)]

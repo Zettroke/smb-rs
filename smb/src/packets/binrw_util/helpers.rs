@@ -1,4 +1,4 @@
-use binrw::{prelude::*, Endian, NullWideString};
+use binrw::{Endian, NullWideString, prelude::*};
 use std::io::{Read, Seek, Write};
 use std::ops::{Deref, DerefMut};
 
