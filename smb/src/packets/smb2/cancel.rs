@@ -15,7 +15,7 @@ pub struct CancelRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::packets::smb2::{test::encode_content, RequestContent};
+    use crate::packets::smb2::{RequestContent, test::encode_content};
 
     use super::*;
 

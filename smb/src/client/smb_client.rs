@@ -3,13 +3,13 @@ use std::{collections::HashMap, str::FromStr};
 use maybe_async::maybe_async;
 
 use crate::{
+    Connection, Error, FileCreateArgs, Resource, Session, Tree,
     packets::{
         dfsc::{ReferralEntry, ReferralEntryValue},
         rpc::interface::{ShareInfo1, SrvSvc},
         smb2::Status,
     },
     resource::Pipe,
-    Connection, Error, FileCreateArgs, Resource, Session, Tree,
 };
 
 use super::{config::ClientConfig, unc_path::UncPath};
@@ -85,7 +85,7 @@ impl Client {
             return Ok(());
         }
 
-        let mut conn = Connection::build(share_unc.server.clone(), self.config.connection.clone())?;
+        let mut conn = Connection::build(&share_unc.server, self.config.connection.clone())?;
         conn.connect().await?;
         let session = conn.authenticate(user_name, password.clone()).await?;
         let tree = session.tree_connect(&share_unc.to_string()).await?;

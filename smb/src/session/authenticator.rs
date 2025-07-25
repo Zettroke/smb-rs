@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use sspi::{
-    ntlm::NtlmConfig, AcquireCredentialsHandleResult, AuthIdentity, BufferType, ClientRequestFlags,
-    CredentialUse, DataRepresentation, InitializeSecurityContextResult, Negotiate, SecurityBuffer,
-    Sspi,
+    AcquireCredentialsHandleResult, AuthIdentity, BufferType, ClientRequestFlags, CredentialUse,
+    DataRepresentation, InitializeSecurityContextResult, Negotiate, SecurityBuffer, Sspi,
+    ntlm::NtlmConfig,
 };
 use sspi::{CredentialsBuffers, NegotiateConfig, SspiImpl};
 
-use crate::connection::connection_info::ConnectionInfo;
-use crate::connection::AuthMethodsConfig;
 use crate::Error;
+use crate::connection::AuthMethodsConfig;
+use crate::connection::connection_info::ConnectionInfo;
 
 #[derive(Debug)]
 pub struct Authenticator {

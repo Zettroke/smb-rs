@@ -1,7 +1,7 @@
 use std::{fmt::Display, io::Cursor, str::FromStr};
 
 use binrw::prelude::*;
-use rand::{rngs::OsRng, Rng};
+use rand::{Rng, rngs::OsRng};
 
 /// Represents a standard, 16-byte GUID.
 ///
@@ -18,7 +18,7 @@ impl Guid {
     pub const ZERO: Guid = Guid(0, 0, 0, [0; 8]);
 
     /// Generates a new random GUID.
-    pub fn gen() -> Self {
+    pub fn generate() -> Self {
         let mut rng = OsRng;
         let mut bytes = [0u8; 16];
         rng.fill(&mut bytes);

@@ -2,20 +2,20 @@
 
 use serial_test::serial;
 use smb::{
+    ConnectionConfig,
     connection::EncryptionMode,
     packets::{fscc::*, smb2::CreateOptions},
     resource::Directory,
     sync_helpers::*,
     tree::Tree,
-    ConnectionConfig,
 };
 use std::sync::Arc;
 
 #[cfg(feature = "async")]
 use futures_util::StreamExt;
 mod common;
-use common::make_server_connection;
 use common::TestConstants;
+use common::make_server_connection;
 use smb::FileCreateArgs;
 
 const LONG_DIR: &str = "longdir";

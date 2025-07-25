@@ -1,4 +1,4 @@
-use binrw::{prelude::*, NullString};
+use binrw::{NullString, prelude::*};
 use modular_bitfield::prelude::*;
 
 use crate::packets::binrw_util::prelude::{FileTime, SizedWideString};

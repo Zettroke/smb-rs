@@ -102,15 +102,15 @@ pub fn make_encrypting_algo(
 
 #[cfg(any(feature = "encrypt_aes128ccm", feature = "encrypt_aes256ccm"))]
 mod encrypt_ccm {
-    use aes::cipher::{generic_array::GenericArray, BlockCipher, BlockEncrypt, BlockSizeUser};
     #[cfg(feature = "encrypt_aes128ccm")]
     use aes::Aes128;
     #[cfg(feature = "encrypt_aes256ccm")]
     use aes::Aes256;
+    use aes::cipher::{BlockCipher, BlockEncrypt, BlockSizeUser, generic_array::GenericArray};
     use ccm::{
+        Ccm, KeyInit, KeySizeUser,
         aead::AeadMutInPlace,
         consts::{U11, U16},
-        Ccm, KeyInit, KeySizeUser,
     };
 
     use crate::{crypto::CryptoError, packets::smb2::EncryptionNonce};
@@ -208,7 +208,7 @@ mod encrypt_ccm {
 #[cfg(any(feature = "encrypt_aes128gcm", feature = "encrypt_aes256gcm"))]
 mod encrypt_gcm {
     use aead::AeadMutInPlace;
-    use aes::cipher::{generic_array::GenericArray, BlockCipher, BlockEncrypt};
+    use aes::cipher::{BlockCipher, BlockEncrypt, generic_array::GenericArray};
     use aes_gcm::{AesGcm, KeyInit, KeySizeUser};
     use crypto_common::typenum;
 

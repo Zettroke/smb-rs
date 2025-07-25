@@ -7,7 +7,7 @@ use crate::dialects::DialectImpl;
 use crate::connection::connection_info::ConnectionInfo;
 use crate::connection::preauth_hash::PreauthHashValue;
 use crate::crypto::{
-    kbkdf_hmacsha256, make_encrypting_algo, make_signing_algo, CryptoError, DerivedKey, KeyToDerive,
+    CryptoError, DerivedKey, KeyToDerive, kbkdf_hmacsha256, make_encrypting_algo, make_signing_algo,
 };
 use crate::packets::smb2::{Dialect, EncryptionCipher, SessionFlags, SigningAlgorithmId};
 
@@ -261,7 +261,9 @@ impl SessionInfo {
 
         let force_encryption = if conn_info.config.encryption_mode.is_required() {
             if !flags.encrypt_data() {
-                log::debug!("Note! session does not require encryption, but it is required by the connection config. Forcing encryption.");
+                log::debug!(
+                    "Note! session does not require encryption, but it is required by the connection config. Forcing encryption."
+                );
             }
             let encryption_ok =
                 if let SessionInfoState::SettingUp { algos, .. } = self.state.as_ref().unwrap() {

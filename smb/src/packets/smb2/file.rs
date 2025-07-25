@@ -5,8 +5,8 @@ use std::io::SeekFrom;
 use binrw::prelude::*;
 use modular_bitfield::prelude::*;
 
-use super::header::Header;
 use super::FileId;
+use super::header::Header;
 use crate::packets::binrw_util::prelude::*;
 
 #[binrw::binrw]

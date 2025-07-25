@@ -11,7 +11,7 @@ use thiserror::Error;
 #[cfg(feature = "async")]
 pub use tokio::{
     select,
-    sync::{mpsc, AcquireError, MutexGuard, OnceCell, Semaphore},
+    sync::{AcquireError, MutexGuard, OnceCell, Semaphore, mpsc},
     task::JoinHandle,
 };
 #[cfg(feature = "async")]

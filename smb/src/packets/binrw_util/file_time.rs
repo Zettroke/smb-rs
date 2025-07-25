@@ -5,8 +5,8 @@ use std::fmt::Display;
 use std::ops::Deref;
 
 use binrw::prelude::*;
-use time::macros::datetime;
 use time::PrimitiveDateTime;
+use time::macros::datetime;
 
 #[derive(BinRead, BinWrite, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct FileTime {

@@ -1,5 +1,5 @@
 use super::binrw_util::prelude::{PosMarker, SizedWideString};
-use binrw::{io::TakeSeekExt, prelude::*, NullWideString};
+use binrw::{NullWideString, io::TakeSeekExt, prelude::*};
 use modular_bitfield::prelude::*;
 
 /// [MS-DFSC 2.2.2][https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dfsc/663c9b38-41b8-4faa-b6f6-a4576b4cea62]:

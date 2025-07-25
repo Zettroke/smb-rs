@@ -1,10 +1,10 @@
 //! A basic create file test.
 
 mod common;
-use common::{make_server_connection, TestConstants, TestEnv};
+use common::{TestConstants, TestEnv, make_server_connection};
 use serial_test::serial;
 use smb::packets::smb2::Status;
-use smb::{packets::fscc::FileDispositionInformation, ConnectionConfig, FileCreateArgs};
+use smb::{ConnectionConfig, FileCreateArgs, packets::fscc::FileDispositionInformation};
 
 #[maybe_async::maybe_async]
 async fn do_test_basic_integration(

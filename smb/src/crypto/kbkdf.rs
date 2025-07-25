@@ -1,8 +1,8 @@
-use aes::cipher::{typenum, InvalidLength};
+use aes::cipher::{InvalidLength, typenum};
 use hmac::{Hmac, Mac};
 use rust_kbkdf::{
-    kbkdf, CounterMode, InputType, KDFMode, PseudoRandomFunction, PseudoRandomFunctionKey,
-    SpecifiedInput,
+    CounterMode, InputType, KDFMode, PseudoRandomFunction, PseudoRandomFunctionKey, SpecifiedInput,
+    kbkdf,
 };
 use sha2::Sha256;
 

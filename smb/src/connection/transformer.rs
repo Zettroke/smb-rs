@@ -252,7 +252,7 @@ impl Transformer {
                         session_id: Some(encrypted_message.header.session_id),
                         why: "Message is encrypted, but no decryptor is set up!",
                         msg_id: None,
-                    }))
+                    }));
                 }
             }
         } else {
@@ -273,7 +273,7 @@ impl Transformer {
                         session_id: None,
                         why: "Compression is requested, but no decompressor is set up!",
                         msg_id: None,
-                    }))
+                    }));
                 }
             }
         } else {

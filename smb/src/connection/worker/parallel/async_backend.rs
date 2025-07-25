@@ -1,6 +1,6 @@
 use crate::connection::transport::traits::{SmbTransport, SmbTransportRead, SmbTransportWrite};
 use crate::msg_handler::IncomingMessage;
-use crate::{sync_helpers::*, Error};
+use crate::{Error, sync_helpers::*};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::{select, sync::oneshot};

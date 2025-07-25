@@ -20,7 +20,7 @@ use std::{
 #[cfg(feature = "async")]
 use tokio::{
     io::{self, AsyncReadExt, AsyncWriteExt},
-    net::{tcp, TcpStream},
+    net::{TcpStream, tcp},
     select,
 };
 

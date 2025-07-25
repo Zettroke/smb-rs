@@ -3,13 +3,13 @@
 use std::sync::Arc;
 
 use crate::{
+    ConnectionConfig, Error,
     connection::{connection_info::NegotiatedProperties, preauth_hash},
     crypto,
     packets::smb2::{
         Dialect, GlobalCapabilities, NegotiateResponse, ShareCacheMode, ShareFlags,
         SigningAlgorithmId, TreeCapabilities,
     },
-    ConnectionConfig, Error,
 };
 
 /// This is a utility struct that returns constants and functions for the given dialect.

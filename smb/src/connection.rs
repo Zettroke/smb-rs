@@ -5,11 +5,11 @@ pub mod transformer;
 pub mod transport;
 pub mod worker;
 
+use crate::Error;
 use crate::dialects::DialectImpl;
 use crate::packets::guid::Guid;
 use crate::packets::smb2::{Command, Response};
 use crate::session::SessionMessageHandler;
-use crate::Error;
 use crate::{compression, sync_helpers::*};
 use crate::{
     crypto,
@@ -24,8 +24,8 @@ use binrw::prelude::*;
 pub use config::*;
 use connection_info::{ConnectionInfo, NegotiatedProperties};
 use maybe_async::*;
+use rand::RngCore;
 use rand::rngs::OsRng;
-use rand::Rng;
 use std::cmp::max;
 use std::collections::HashMap;
 #[cfg(feature = "multi_threaded")]
@@ -34,7 +34,7 @@ use std::sync::atomic::{AtomicU16, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
 pub use transformer::TransformError;
-use transport::{make_transport, SmbTransport};
+use transport::{SmbTransport, make_transport};
 use worker::{Worker, WorkerImpl};
 
 pub struct Connection {
@@ -47,13 +47,13 @@ pub struct Connection {
 impl Connection {
     /// Creates a new SMB connection, specifying a server configuration, without connecting to a server.
     /// Use the [`connect`](Connection::connect) method to establish a connection.
-    pub fn build(server: String, config: ConnectionConfig) -> crate::Result<Connection> {
+    pub fn build(server: &str, config: ConnectionConfig) -> crate::Result<Connection> {
         config.validate()?;
-        let client_guid = config.client_guid.unwrap_or_else(Guid::gen);
+        let client_guid = config.client_guid.unwrap_or_else(Guid::generate);
         Ok(Connection {
             handler: HandlerReference::new(ConnectionMessageHandler::new(client_guid)),
             config,
-            server,
+            server: server.to_string(),
         })
     }
 
@@ -85,6 +85,27 @@ impl Connection {
             .await?;
 
         Ok(())
+    }
+
+    /// Starts a new connection from an existing, connected transport.
+    ///
+    /// # Arguments
+    /// * `transport` - The transport to use for the connection.
+    /// * `server` - The name or address of the server to connect to.
+    /// * `config` - The connection configuration. Note that the [`ConnectionConfig::transport`] field is NOT used when
+    ///   creating the connection.
+    /// # Returns
+    /// A new [`Connection`] object with the specified transport and configuration.
+    #[maybe_async]
+    pub async fn from_transport(
+        transport: Box<dyn SmbTransport>,
+        server: &str,
+        config: ConnectionConfig,
+    ) -> crate::Result<Self> {
+        let mut conn = Self::build(server, config)?;
+        conn.negotiate(transport, conn.config.smb2_only_negotiate)
+            .await?;
+        Ok(conn)
     }
 
     #[maybe_async]
@@ -119,7 +140,7 @@ impl Connection {
                 _ => {
                     return Err(Error::InvalidMessage(
                         "Expected SMB2 negotiate response, got SMB1".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -262,13 +283,15 @@ impl Connection {
 
         // Context list supported on SMB3.1.1+
         let ctx_list = if supported_dialects.contains(&Dialect::Smb0311) {
+            let mut preauth_integrity_hash = [0u8; 32];
+            OsRng.fill_bytes(&mut preauth_integrity_hash);
             let mut ctx_list = vec![
                 NegotiateContext {
                     context_type: NegotiateContextType::PreauthIntegrityCapabilities,
                     data: NegotiateContextValue::PreauthIntegrityCapabilities(
                         PreauthIntegrityCapabilities {
                             hash_algorithms: vec![HashAlgorithm::Sha512],
-                            salt: (0..32).map(|_| OsRng.gen()).collect(),
+                            salt: preauth_integrity_hash.to_vec(),
                         },
                     ),
                 },

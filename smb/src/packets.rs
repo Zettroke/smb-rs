@@ -1,3 +1,5 @@
+#![allow(unused_parens)]
+
 pub mod binrw_util;
 pub mod dfsc;
 pub mod fscc;

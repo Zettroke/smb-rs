@@ -2,9 +2,9 @@ mod encryption;
 mod kbkdf;
 mod signing;
 
-pub use encryption::{make_encrypting_algo, EncryptingAlgo, ENCRYPTING_ALGOS};
-pub use kbkdf::{kbkdf_hmacsha256, DerivedKey, KeyToDerive};
-pub use signing::{make_signing_algo, SigningAlgo, SIGNING_ALGOS};
+pub use encryption::{ENCRYPTING_ALGOS, EncryptingAlgo, make_encrypting_algo};
+pub use kbkdf::{DerivedKey, KeyToDerive, kbkdf_hmacsha256};
+pub use signing::{SIGNING_ALGOS, SigningAlgo, make_signing_algo};
 
 use crypto_common::InvalidLength;
 use thiserror::Error;

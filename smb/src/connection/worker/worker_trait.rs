@@ -1,10 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use crate::{
+    Error,
     connection::{connection_info::ConnectionInfo, transport::traits::SmbTransport},
     msg_handler::ReceiveOptions,
     sync_helpers::*,
-    Error,
 };
 
 use maybe_async::*;
@@ -25,7 +25,7 @@ use crate::{
 pub trait Worker: Sized + std::fmt::Debug {
     /// Instantiates a new connection worker.
     async fn start(transport: Box<dyn SmbTransport>, timeout: Duration)
-        -> crate::Result<Arc<Self>>;
+    -> crate::Result<Arc<Self>>;
     /// Stops the worker, shutting down the connection.
     async fn stop(&self) -> crate::Result<()>;
 

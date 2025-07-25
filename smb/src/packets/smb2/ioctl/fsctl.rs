@@ -1,6 +1,6 @@
 //! FSCTL codes and structs.
 use crate::packets::binrw_util::prelude::*;
-use binrw::{io::TakeSeekExt, prelude::*, NullWideString};
+use binrw::{NullWideString, io::TakeSeekExt, prelude::*};
 use modular_bitfield::prelude::*;
 
 use crate::packets::{
