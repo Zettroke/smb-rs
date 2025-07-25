@@ -85,7 +85,7 @@ impl Client {
             return Ok(());
         }
 
-        let mut conn = Connection::build(share_unc.server.clone(), self.config.connection.clone())?;
+        let mut conn = Connection::build(&share_unc.server, self.config.connection.clone())?;
         conn.connect().await?;
         let session = conn.authenticate(user_name, password.clone()).await?;
         let tree = session.tree_connect(&share_unc.to_string()).await?;

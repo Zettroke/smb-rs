@@ -47,13 +47,13 @@ pub struct Connection {
 impl Connection {
     /// Creates a new SMB connection, specifying a server configuration, without connecting to a server.
     /// Use the [`connect`](Connection::connect) method to establish a connection.
-    pub fn build(server: String, config: ConnectionConfig) -> crate::Result<Connection> {
+    pub fn build(server: &str, config: ConnectionConfig) -> crate::Result<Connection> {
         config.validate()?;
         let client_guid = config.client_guid.unwrap_or_else(Guid::gen);
         Ok(Connection {
             handler: HandlerReference::new(ConnectionMessageHandler::new(client_guid)),
             config,
-            server,
+            server: server.to_string(),
         })
     }
 
@@ -85,6 +85,27 @@ impl Connection {
             .await?;
 
         Ok(())
+    }
+
+    /// Starts a new connection from an existing, connected transport.
+    ///
+    /// # Arguments
+    /// * `transport` - The transport to use for the connection.
+    /// * `server` - The name or address of the server to connect to.
+    /// * `config` - The connection configuration. Note that the [`ConnectionConfig::transport`] field is NOT used when
+    ///   creating the connection.
+    /// # Returns
+    /// A new [`Connection`] object with the specified transport and configuration.
+    #[maybe_async]
+    pub async fn from_transport(
+        transport: Box<dyn SmbTransport>,
+        server: &str,
+        config: ConnectionConfig,
+    ) -> crate::Result<Self> {
+        let mut conn = Self::build(server, config)?;
+        conn.negotiate(transport, conn.config.smb2_only_negotiate)
+            .await?;
+        Ok(conn)
     }
 
     #[maybe_async]
