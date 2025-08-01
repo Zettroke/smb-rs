@@ -589,23 +589,35 @@ impl ResourceHandle {
         .await
     }
 
-    /// Close the handle.
+    /// (Internal)
+    ///
+    /// Sends a close request to the server for the given file ID.
+    /// This should be called properly after taking out the file id (handle) from the resource instance,
+    /// to avoid Use-after-free errors.
     #[maybe_async]
-    async fn close(&mut self) -> crate::Result<()> {
+    async fn send_close(
+        file_id: FileId,
+        handler: &HandlerReference<ResourceMessageHandle>,
+    ) -> crate::Result<()> {
+        log::trace!("Send close to file with ID: {file_id:?}");
+        let response = handler.send_recv(CloseRequest { file_id }.into()).await?;
+        log::debug!("Close response received for file ID: {file_id:?}, {response:?}");
+        Ok(())
+    }
+
+    /// Closes the resource.
+    /// The resource may not be used after calling this method.
+    ///
+    /// # Returns
+    /// A `Result` indicating success or failure.
+    #[maybe_async]
+    pub async fn close(&mut self) -> crate::Result<()> {
         if !self.is_valid() {
-            return Err(Error::InvalidState("Handle is not valid".into()));
+            return Err(Error::InvalidState("Resource is already closed".into()));
         }
 
         log::debug!("Closing handle for {} ({:?})", self.name, self.file_id);
-        let _response = self
-            .handler
-            .send_recv(
-                CloseRequest {
-                    file_id: self.file_id,
-                }
-                .into(),
-            )
-            .await?;
+        Self::send_close(self.file_id, &self.handler).await?;
 
         self.file_id = FileId::EMPTY;
         log::info!("Closed file {}.", self.name);
@@ -613,6 +625,7 @@ impl ResourceHandle {
         Ok(())
     }
 
+    /// Returns whether the resource is valid (i.e., not closed).
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.file_id != FileId::EMPTY
@@ -620,7 +633,7 @@ impl ResourceHandle {
 
     #[maybe_async]
     #[inline]
-    pub async fn send_receive(
+    async fn send_receive(
         &self,
         msg: RequestContent,
     ) -> crate::Result<crate::msg_handler::IncomingMessage> {
@@ -650,17 +663,6 @@ impl ResourceHandle {
             &other.handler.upstream.handler,
         )
     }
-
-    #[cfg(feature = "async")]
-    pub async fn close_async(&mut self) {
-        self.close()
-            .await
-            .map_err(|e| {
-                log::error!("Error closing file: {e}");
-                e
-            })
-            .ok();
-    }
 }
 
 struct ResourceMessageHandle {
@@ -668,7 +670,7 @@ struct ResourceMessageHandle {
 }
 
 impl ResourceMessageHandle {
-    pub fn new(upstream: &Upstream) -> HandlerReference<ResourceMessageHandle> {
+    fn new(upstream: &Upstream) -> HandlerReference<ResourceMessageHandle> {
         HandlerReference::new(ResourceMessageHandle {
             upstream: upstream.clone(),
         })
@@ -698,22 +700,27 @@ impl MessageHandler for ResourceMessageHandle {
 #[cfg(not(feature = "async"))]
 impl Drop for ResourceHandle {
     fn drop(&mut self) {
-        self.close()
-            .map_err(|e| {
-                log::error!("Error closing file: {e}");
-                e
-            })
-            .ok();
+        if self.is_valid() {
+            log::warn!(
+                "ResourceHandle for '{}' is being dropped without closing it properly. This may lead to resource leaks.",
+                self.name
+            );
+        }
     }
 }
 
 #[cfg(feature = "async")]
 impl Drop for ResourceHandle {
     fn drop(&mut self) {
-        tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(async {
-                self.close_async().await;
-            })
-        })
+        let file_id = std::mem::replace(&mut self.file_id, FileId::EMPTY);
+        let handler = self.handler.clone();
+        log::trace!("Spawning task to close file with ID: {file_id:?}");
+        tokio::task::spawn(async move {
+            if file_id != FileId::EMPTY {
+                if let Err(e) = Self::send_close(file_id, &handler).await {
+                    log::error!("Error closing file: {e}");
+                }
+            }
+        });
     }
 }
