@@ -93,7 +93,9 @@ impl Transformer {
         }
     }
 
-    /// Internal: Returns the session with the given ID.
+    /// (Internal)
+    /// 
+    ///  Returns the session with the given ID.
     #[maybe_async]
     #[inline]
     async fn get_session(&self, session_id: u64) -> crate::Result<Arc<Mutex<SessionInfo>>> {
@@ -107,7 +109,9 @@ impl Transformer {
             )))
     }
 
-    /// Internal: Calculates the next preauth integrity hash value, if required.
+    /// (Internal)
+    /// 
+    ///  Calculates the next preauth integrity hash value, if required.
     #[maybe_async]
     async fn step_preauth_hash(&self, raw: &[u8]) -> crate::Result<()> {
         let mut pa_hash = self.preauth_hash.lock().await?;
@@ -309,7 +313,9 @@ impl Transformer {
         Ok(IncomingMessage { message, raw, form })
     }
 
-    /// Internal: a helper method to verify the incoming message.
+    /// (Internal)
+    /// 
+    /// A helper method to verify the incoming message.
     /// This method is used to verify the signature of the incoming message,
     /// if such verification is required.
     #[maybe_async]

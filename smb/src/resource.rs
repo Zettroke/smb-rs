@@ -276,14 +276,22 @@ impl ResourceHandle {
         self.share_type
     }
 
+    /// (Internal)
+    ///
+    /// Returns the file ID of the resource, ensuring the resource is still open.
     fn file_id(&self) -> crate::Result<FileId> {
-        if !self.open.load(std::sync::atomic::Ordering::SeqCst) {
+        // The current design here allows the race condition over a close after this validation occurs.
+        // therefore, this atomic load can be relaxed, and actual atomic compare and exchange are used
+        // to avoid double close somehow.
+        if !self.open.load(std::sync::atomic::Ordering::Relaxed) {
             return Err(Error::InvalidState("Resource is closed".into()));
         }
         Ok(self._file_id)
     }
 
-    /// Internal: Sends a Query Information Request and parses the response.
+    /// (Internal)
+    ///
+    /// Sends a Query Information Request and parses the response.
     #[maybe_async]
     async fn query_common(&self, req: QueryInfoRequest) -> crate::Result<QueryInfoData> {
         let info_type = req.info_type;
@@ -295,7 +303,10 @@ impl ResourceHandle {
             .to_queryinfo()?
             .parse(info_type)?)
     }
-    /// Internal: Sends a Set Information Request and parses the response.
+
+    /// (Internal)
+    ///
+    /// Sends a Set Information Request and parses the response.
     #[maybe_async]
     async fn set_info_common<T>(
         &self,
