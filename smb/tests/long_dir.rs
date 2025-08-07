@@ -42,20 +42,18 @@ async fn test_smb_iterating_long_directory() -> Result<(), Box<dyn std::error::E
     let client = Arc::new(Mutex::new(client));
     let long_dir_path = share_path.clone().with_path(LONG_DIR.to_string());
     // Mkdir
-    {
-        client
-            .lock()
-            .await
-            .unwrap()
-            .create_file(
-                &long_dir_path,
-                &FileCreateArgs::make_create_new(
-                    FileAttributes::new().with_directory(true),
-                    CreateOptions::new().with_directory_file(true),
-                ),
-            )
-            .await?;
-    }
+    client
+        .lock()
+        .await
+        .unwrap()
+        .create_file(
+            &long_dir_path,
+            &FileCreateArgs::make_create_new(
+                FileAttributes::new().with_directory(true),
+                CreateOptions::new().with_directory_file(true),
+            ),
+        )
+        .await?;
 
     // Create NUM_ITEMS files
     for i in 0..NUM_ITEMS {
@@ -126,6 +124,7 @@ async fn test_smb_iterating_long_directory() -> Result<(), Box<dyn std::error::E
                         })
                         .await
                         .unwrap();
+                        file.close().await.unwrap();
                         sum + 1
                     }
                 })
@@ -135,23 +134,22 @@ async fn test_smb_iterating_long_directory() -> Result<(), Box<dyn std::error::E
 
     // Cleanup
     {
-        let directory = Arc::new(
-            client
-                .lock()
-                .await
-                .unwrap()
-                .create_file(
-                    &long_dir_path,
-                    &FileCreateArgs::make_open_existing(FileAccessMask::new().with_delete(true)),
-                )
-                .await?
-                .unwrap_dir(),
-        );
+        let directory = client
+            .lock()
+            .await
+            .unwrap()
+            .create_file(
+                &long_dir_path,
+                &FileCreateArgs::make_open_existing(FileAccessMask::new().with_delete(true)),
+            )
+            .await?
+            .unwrap_dir();
         directory
             .set_file_info(FileDispositionInformation {
                 delete_pending: true.into(),
             })
             .await?;
+        directory.close().await?;
     }
     // Wait for the delete to be processed
 

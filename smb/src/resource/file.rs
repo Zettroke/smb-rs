@@ -103,7 +103,7 @@ impl File {
                     flags,
                     length: buf.len() as u32,
                     offset: pos,
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                     minimum_count: 1,
                 }
                 .into(),
@@ -158,7 +158,7 @@ impl File {
             .send_receive(
                 WriteRequest {
                     offset: pos,
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                     flags: WriteFlags::new(),
                     buffer: buf.to_vec(),
                 }
@@ -188,7 +188,7 @@ impl File {
             .handle
             .send_receive(
                 FlushRequest {
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                 }
                 .into(),
             )

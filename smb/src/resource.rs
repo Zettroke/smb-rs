@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, atomic::AtomicBool};
 
 use maybe_async::*;
 use time::PrimitiveDateTime;
@@ -152,7 +152,8 @@ impl Resource {
         let handle = ResourceHandle {
             name: name.to_string(),
             handler: ResourceMessageHandle::new(upstream),
-            file_id: response.file_id,
+            open: AtomicBool::new(true),
+            _file_id: response.file_id,
             created: response.creation_time.date_time(),
             modified: response.last_write_time.date_time(),
             access,
@@ -238,7 +239,13 @@ pub struct ResourceHandle {
     name: String,
     handler: HandlerReference<ResourceMessageHandle>,
 
-    file_id: FileId,
+    // Whether the resource is open or not.
+    // TODO: Consider using RwLock here on FileId instead of AtomicBool+FileId.
+    open: AtomicBool,
+
+    // Avoid accessing directly; use the `file_id()` getter,
+    // that makes sure the resource is still open.
+    _file_id: FileId,
     created: PrimitiveDateTime,
     modified: PrimitiveDateTime,
     share_type: ShareType,
@@ -269,6 +276,13 @@ impl ResourceHandle {
         self.share_type
     }
 
+    fn file_id(&self) -> crate::Result<FileId> {
+        if !self.open.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err(Error::InvalidState("Resource is closed".into()));
+        }
+        Ok(self._file_id)
+    }
+
     /// Internal: Sends a Query Information Request and parses the response.
     #[maybe_async]
     async fn query_common(&self, req: QueryInfoRequest) -> crate::Result<QueryInfoData> {
@@ -292,7 +306,7 @@ impl ResourceHandle {
     where
         T: Into<SetInfoData>,
     {
-        let data = data.into().to_req(cls, self.file_id, additional_info);
+        let data = data.into().to_req(cls, self.file_id()?, additional_info);
         let response = self.send_receive(data.into()).await?;
         response.message.content.to_setinfo()?;
         Ok(())
@@ -336,7 +350,7 @@ impl ResourceHandle {
             flags: QueryInfoFlags::new()
                 .with_restart_scan(true)
                 .with_return_single_entry(true),
-            file_id: self.file_id,
+            file_id: self.file_id()?,
             data: GetInfoRequestData::EaInfo(GetEaInfoList {
                 values: names
                     .iter()
@@ -372,7 +386,7 @@ impl ResourceHandle {
             output_buffer_length: output_buffer_length as u32,
             additional_info: AdditionalInfo::new(),
             flags,
-            file_id: self.file_id,
+            file_id: self.file_id()?,
             data: GetInfoRequestData::None(()),
         })
         .await?
@@ -398,7 +412,7 @@ impl ResourceHandle {
                 output_buffer_length: 1024,
                 additional_info,
                 flags: QueryInfoFlags::new(),
-                file_id: self.file_id,
+                file_id: self.file_id()?,
                 data: GetInfoRequestData::None(()),
             })
             .await?
@@ -487,7 +501,7 @@ impl ResourceHandle {
             .send_recvo(
                 RequestContent::Ioctl(IoctlRequest {
                     ctl_code,
-                    file_id: self.file_id,
+                    file_id: self.file_id()?,
                     max_input_response: max_in,
                     max_output_response: max_out,
                     flags,
@@ -524,7 +538,7 @@ impl ResourceHandle {
             flags: QueryInfoFlags::new()
                 .with_restart_scan(true)
                 .with_return_single_entry(true),
-            file_id: self.file_id,
+            file_id: self.file_id()?,
             data: GetInfoRequestData::None(()),
         })
         .await?
@@ -611,24 +625,26 @@ impl ResourceHandle {
     /// # Returns
     /// A `Result` indicating success or failure.
     #[maybe_async]
-    pub async fn close(&mut self) -> crate::Result<()> {
-        if !self.is_valid() {
+    pub async fn close(&self) -> crate::Result<()> {
+        if self
+            .open
+            .compare_exchange(
+                true,
+                false,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            )
+            .is_err()
+        {
             return Err(Error::InvalidState("Resource is already closed".into()));
         }
 
-        log::debug!("Closing handle for {} ({:?})", self.name, self.file_id);
-        Self::send_close(self.file_id, &self.handler).await?;
+        log::debug!("Closing handle for {} ({:?})", self.name, self._file_id);
+        Self::send_close(self._file_id, &self.handler).await?;
 
-        self.file_id = FileId::EMPTY;
         log::info!("Closed file {}.", self.name);
 
         Ok(())
-    }
-
-    /// Returns whether the resource is valid (i.e., not closed).
-    #[inline]
-    pub fn is_valid(&self) -> bool {
-        self.file_id != FileId::EMPTY
     }
 
     #[maybe_async]
@@ -700,21 +716,39 @@ impl MessageHandler for ResourceMessageHandle {
 #[cfg(not(feature = "async"))]
 impl Drop for ResourceHandle {
     fn drop(&mut self) {
-        if self.is_valid() {
-            log::warn!(
-                "ResourceHandle for '{}' is being dropped without closing it properly. This may lead to resource leaks.",
-                self.name
-            );
+        let file_id = self.file_id();
+        if file_id.is_err() {
+            return;
         }
+
+        log::warn!(
+            "ResourceHandle for '{}' ({}) is being dropped without closing it properly. This may lead to resource leaks.",
+            self.name,
+            self._file_id
+        );
     }
 }
 
 #[cfg(feature = "async")]
 impl Drop for ResourceHandle {
     fn drop(&mut self) {
-        let file_id = std::mem::replace(&mut self.file_id, FileId::EMPTY);
+        if self
+            .open
+            .compare_exchange(
+                true,
+                false,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            )
+            .is_err()
+        {
+            // already closed, no problem
+            return;
+        }
+
+        let file_id = self._file_id;
         let handler = self.handler.clone();
-        log::trace!("Spawning task to close file with ID: {file_id:?}");
+        log::debug!("Spawning task to close file with ID: {file_id:?}");
         tokio::task::spawn(async move {
             if file_id != FileId::EMPTY {
                 if let Err(e) = Self::send_close(file_id, &handler).await {

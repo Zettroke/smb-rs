@@ -1,10 +1,9 @@
 #![cfg(not(feature = "single_threaded"))]
 use serial_test::serial;
 use smb::{
-    ConnectionConfig, FileCreateArgs,
+    ConnectionConfig, Directory, FileCreateArgs,
     connection::EncryptionMode,
     packets::{fscc::*, smb2::NotifyFilter},
-    resource::Resource,
     sync_helpers::*,
 };
 use std::sync::Arc;
@@ -31,16 +30,17 @@ async fn test_smb_notify() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
 
     // Create the file
-    {
-        client
-            .create_file(
-                &share_path
-                    .clone()
-                    .with_path(NEW_FILE_NAME_UNDER_WORKDIR.to_string()),
-                &FileCreateArgs::make_create_new(Default::default(), Default::default()),
-            )
-            .await?;
-    }
+    client
+        .create_file(
+            &share_path
+                .clone()
+                .with_path(NEW_FILE_NAME_UNDER_WORKDIR.to_string()),
+            &FileCreateArgs::make_create_new(Default::default(), Default::default()),
+        )
+        .await?
+        .unwrap_file()
+        .close()
+        .await?;
 
     let dir = client
         .create_file(
@@ -49,7 +49,8 @@ async fn test_smb_notify() -> Result<(), Box<dyn std::error::Error>> {
                 DirAccessMask::new().with_list_directory(true).into(),
             ),
         )
-        .await?;
+        .await?
+        .unwrap_dir();
 
     let notified_sem = Arc::new(Semaphore::new(0));
     start_notify_task(notified_sem.clone(), dir);
@@ -62,7 +63,7 @@ async fn test_smb_notify() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[maybe_async::async_impl]
-fn start_notify_task(sem: Arc<Semaphore>, r: Resource) {
+fn start_notify_task(sem: Arc<Semaphore>, r: Directory) {
     let filter = NotifyFilter::new()
         .with_file_name(true)
         .with_dir_name(true)
@@ -70,7 +71,7 @@ fn start_notify_task(sem: Arc<Semaphore>, r: Resource) {
         .with_last_write(true)
         .with_last_access(true);
     tokio::spawn(async move {
-        for notification in r.unwrap_dir().watch(filter, true).await.unwrap() {
+        for notification in r.watch(filter, true).await.unwrap() {
             if notification.action == NotifyAction::Removed {
                 sem.add_permits(1);
                 break;
@@ -79,7 +80,7 @@ fn start_notify_task(sem: Arc<Semaphore>, r: Resource) {
     });
 }
 #[maybe_async::sync_impl]
-fn start_notify_task(sem: Arc<Semaphore>, r: Resource) {
+fn start_notify_task(sem: Arc<Semaphore>, r: Directory) {
     let filter = NotifyFilter::new()
         .with_file_name(true)
         .with_dir_name(true)
@@ -87,7 +88,7 @@ fn start_notify_task(sem: Arc<Semaphore>, r: Resource) {
         .with_last_write(true)
         .with_last_access(true);
     std::thread::spawn(move || {
-        for notification in r.unwrap_dir().watch(filter, true).unwrap() {
+        for notification in r.watch(filter, true).unwrap() {
             if notification.action == NotifyAction::Removed {
                 sem.add_permits(1);
                 break;
@@ -125,6 +126,8 @@ async fn delete_file_from_another_connection(
         delete_pending: true.into(),
     })
     .await?;
+
+    file.close().await?;
 
     // We are exiting, and file is closed, and deleted!
     Ok(())
