@@ -472,6 +472,7 @@ pub struct ConnectionMessageHandler {
     /// The current message ID to be used in the next message.
     curr_msg_id: AtomicU64,
     /// The number of credits granted to the client by the server, including the being-used ones.
+    /// This field is used ONLY when large MTU is enabled.
     credit_pool: AtomicU16,
 }
 
@@ -503,6 +504,7 @@ impl ConnectionMessageHandler {
     ];
 
     const CREDIT_CALC_RATIO: u32 = 65536;
+    const CREDITS_PER_MSG_NO_LARGE_MTU: u32 = 1;
 
     #[maybe_async]
     async fn process_sequence_outgoing(&self, msg: &mut OutgoingMessage) -> crate::Result<()> {
@@ -542,10 +544,23 @@ impl ConnectionMessageHandler {
                 debug_assert_eq!(msg.message.header.credit_charge, 0);
             }
         }
-        // Default case: next sequence ID
-        {
-            msg.message.header.message_id = self.curr_msg_id.fetch_add(1, Ordering::SeqCst);
-        }
+
+        // Default case: logically waiting for single credit per message,
+        // which will make the client wait for next response before allowing next request.
+        self.curr_credits
+            .acquire_many(Self::CREDITS_PER_MSG_NO_LARGE_MTU)
+            .await?
+            .forget();
+        debug_assert!(
+            self.curr_credits.available_permits() == 0,
+            "Expected 0 credits available with no large mtu, got {}",
+            self.curr_credits.available_permits()
+        );
+
+        msg.message.header.message_id = self
+            .curr_msg_id
+            .fetch_add(Self::CREDITS_PER_MSG_NO_LARGE_MTU as u64, Ordering::SeqCst);
+
         Ok(())
     }
 
@@ -567,8 +582,19 @@ impl ConnectionMessageHandler {
 
                 // Return the credits to the pool.
                 self.curr_credits.add_permits(granted_credits as usize);
+                return Ok(());
             }
         }
+
+        // Default case: return a single credit to the pool.
+        self.curr_credits
+            .add_permits(Self::CREDITS_PER_MSG_NO_LARGE_MTU as usize);
+        debug_assert!(
+            self.curr_credits.available_permits() <= Self::CREDITS_PER_MSG_NO_LARGE_MTU as usize,
+            "Expected at most {} credits available with no large mtu, got {}",
+            Self::CREDITS_PER_MSG_NO_LARGE_MTU,
+            self.curr_credits.available_permits()
+        );
         Ok(())
     }
 
@@ -649,6 +675,7 @@ impl MessageHandler for ConnectionMessageHandler {
             None => 0,
         };
         msg.message.header.flags = msg.message.header.flags.with_priority_mask(priority_value);
+
         self.process_sequence_outgoing(&mut msg).await?;
 
         self.worker
