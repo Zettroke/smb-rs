@@ -637,16 +637,7 @@ impl ResourceHandle {
     /// A `Result` indicating success or failure.
     #[maybe_async]
     pub async fn close(&self) -> crate::Result<()> {
-        if self
-            .open
-            .compare_exchange(
-                true,
-                false,
-                std::sync::atomic::Ordering::SeqCst,
-                std::sync::atomic::Ordering::SeqCst,
-            )
-            .is_err()
-        {
+        if !self.open.swap(false, std::sync::atomic::Ordering::Relaxed) {
             return Err(Error::InvalidState("Resource is already closed".into()));
         }
 
@@ -743,16 +734,7 @@ impl Drop for ResourceHandle {
 #[cfg(feature = "async")]
 impl Drop for ResourceHandle {
     fn drop(&mut self) {
-        if self
-            .open
-            .compare_exchange(
-                true,
-                false,
-                std::sync::atomic::Ordering::SeqCst,
-                std::sync::atomic::Ordering::SeqCst,
-            )
-            .is_err()
-        {
+        if !self.open.swap(false, std::sync::atomic::Ordering::Relaxed) {
             // already closed, no problem
             return;
         }

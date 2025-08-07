@@ -77,6 +77,7 @@ fn start_notify_task(sem: Arc<Semaphore>, r: Directory) {
                 break;
             }
         }
+        r.close().await.unwrap();
     });
 }
 #[maybe_async::sync_impl]
@@ -94,6 +95,7 @@ fn start_notify_task(sem: Arc<Semaphore>, r: Directory) {
                 break;
             }
         }
+        r.close().unwrap();
     });
 }
 #[maybe_async::maybe_async]

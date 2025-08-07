@@ -134,6 +134,8 @@ async fn test_smb_integration_dialect_encrpytion_mode(
         //         sid: None,
         //     })
         //     .await?;
+
+        directory.close().await?;
     }
 
     let file = client
