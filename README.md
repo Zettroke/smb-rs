@@ -87,3 +87,8 @@ If you're using the crate, you can enable the features in your `Cargo.toml` file
 [dependencies]
 smb = { version = "0.1", features = ["multi_threaded", "sign", "..."], no-default-features = true }
 ```
+
+## Development
+To set up a development environment, you may use any supported rust version.
+
+It is highly recommended to use rust nightly, and install pre-commit hooks (using `pip install pre-commit && pre-commit install`)
