@@ -1,9 +1,14 @@
 //! A basic create file test.
 
 mod common;
+use std::str::FromStr;
+use std::time::Duration;
+
 use common::{TestConstants, TestEnv, make_server_connection};
 use serial_test::serial;
+use smb::error::TimedOutTask;
 use smb::packets::smb2::Status;
+use smb::{Client, ClientConfig, UncPath};
 use smb::{ConnectionConfig, FileCreateArgs, packets::fscc::FileDispositionInformation};
 
 #[maybe_async::maybe_async]
@@ -101,4 +106,62 @@ async fn do_test_basic_auth_fail() -> smb::Result<()> {
         _ => panic!("Expected LogonFailure error"),
     }
     smb::Result::Ok(())
+}
+
+#[test_log::test(maybe_async::test(
+    not(feature = "async"),
+    async(feature = "async", tokio::test(flavor = "multi_thread"))
+))]
+#[serial]
+async fn test_connection_timeout_fail() -> Result<(), Box<dyn std::error::Error>> {
+    use std::time::Instant;
+
+    const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+    let mut client = Client::new(ClientConfig {
+        connection: ConnectionConfig {
+            timeout: Some(CONNECT_TIMEOUT),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
+    const UNRESPONSIVE_SMB_HOST: &str = "8.8.8.8";
+    let time_before = Instant::now();
+    let share_connect_result = client
+        .share_connect(
+            &UncPath::from_str(&format!("\\\\{}\\share", UNRESPONSIVE_SMB_HOST)).unwrap(),
+            "user",
+            "password".to_string(),
+        )
+        .await;
+    let time_after = Instant::now();
+
+    if !matches!(
+        share_connect_result,
+        Err(smb::Error::OperationTimeout(
+            TimedOutTask::TcpConnect,
+            CONNECT_TIMEOUT
+        ))
+    ) {
+        return Err(format!(
+            "Expected OperationTimeout error, got {:?}!",
+            share_connect_result
+        )
+        .into());
+    }
+
+    let delta_timeout = time_after.duration_since(time_before);
+    let connect_timeout_with_margins_max = CONNECT_TIMEOUT + Duration::from_millis(100);
+    let connect_timeout_with_margins_min = CONNECT_TIMEOUT - Duration::from_millis(5);
+    if delta_timeout < connect_timeout_with_margins_min
+        || delta_timeout > connect_timeout_with_margins_max
+    {
+        return Err(format!(
+            "Expected timeout to be at least {:?}, but it was {:?}!",
+            connect_timeout_with_margins_max, delta_timeout
+        )
+        .into());
+    }
+
+    Ok(())
 }
