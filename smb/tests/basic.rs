@@ -1,9 +1,12 @@
 //! A basic create file test.
 
 mod common;
+use std::str::FromStr;
+
 use common::{TestConstants, TestEnv, make_server_connection};
 use serial_test::serial;
 use smb::packets::smb2::Status;
+use smb::{Client, ClientConfig, UncPath};
 use smb::{ConnectionConfig, FileCreateArgs, packets::fscc::FileDispositionInformation};
 
 #[maybe_async::maybe_async]
@@ -100,4 +103,38 @@ async fn do_test_basic_auth_fail() -> smb::Result<()> {
         _ => panic!("Expected LogonFailure error"),
     }
     smb::Result::Ok(())
+}
+
+#[test_log::test(maybe_async::test(
+    not(feature = "async"),
+    async(feature = "async", tokio::test(flavor = "multi_thread"))
+))]
+#[serial]
+async fn test_connection_timeout_fail() -> Result<(), Box<dyn std::error::Error>> {
+    const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+    let mut client = Client::new(ClientConfig {
+        connection: ConnectionConfig {
+            timeout: Some(CONNECT_TIMEOUT),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
+    const UNRESPONSIVE_SMB_HOST: &str = "8.8.8.8";
+    let share_connect_result = client
+        .share_connect(
+            &UncPath::from_str(&format!("\\\\{}\\share", UNRESPONSIVE_SMB_HOST)).unwrap(),
+            "user",
+            "password".to_string(),
+        )
+        .await;
+
+    if !matches!(
+        share_connect_result,
+        Err(smb::Error::OperationTimeout(_, CONNECT_TIMEOUT))
+    ) {
+        return Err("Expected OperationTimeout error!".into());
+    }
+
+    Ok(())
 }
