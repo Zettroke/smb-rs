@@ -9,6 +9,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  COMMON_FEATURES: "sign,encrypt,compress,kerberos"
 
 jobs:
   test:
@@ -19,8 +20,6 @@ jobs:
     strategy:
       matrix:
         compile_features: [ async, multi_threaded, single_threaded ]
-    env:
-      COMMON_FEATURES: "sign,encrypt,compress,kerberos"
 
     services:
       samba:
@@ -46,7 +45,7 @@ jobs:
     - name: Lint/${{ matrix.compile_features }}
       run: |
         rustup component add clippy
-        cargo clippy --verbose --no-default-features --features "${{ matrix.compile_features }},${COMMON_FEATURES}" -- -D warnings
+        cargo clippy --verbose --no-default-features --features "${{ matrix.compile_features }},${COMMON_FEATURES}" -- -Dclippy::all
     - name: Tests/${{ matrix.compile_features }}
       run: |
         export SMB_RUST_TESTS_SERVER=samba
@@ -60,3 +59,17 @@ jobs:
         cargo test --verbose --no-default-features --features "${{ matrix.compile_features }},sign_hmac" -- --nocapture
     - name: Build/${{ matrix.compile_features }}
       run: cargo build --verbose --no-default-features --features "${{ matrix.compile_features }},${COMMON_FEATURES}"
+  
+  build-msrv:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.85
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          for td_model in async multi_threaded single_threaded; do
+            echo "Compiling with features: $td_model, ${COMMON_FEATURES}"
+            cargo build --verbose --no-default-features --features "$td_model,${COMMON_FEATURES}"
+          done

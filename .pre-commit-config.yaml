@@ -11,7 +11,8 @@ repos:
       - id: rust-clippy
         name: Rust clippy
         description: Run cargo clippy on files included in the commit. clippy should be installed before-hand.
-        entry: cargo clippy --fix --allow-staged -- -Dclippy::all
+        entry: cargo clippy -- -Dclippy::all
         pass_filenames: false
         types: [file, rust]
         language: system
+        verbose: true
