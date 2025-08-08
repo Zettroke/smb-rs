@@ -9,6 +9,13 @@ use crate::{
     sync_helpers::AcquireError,
 };
 
+#[derive(Debug)]
+pub enum TimedOutTask {
+    TcpConnect,
+    QuicConnect,
+    ReceiveNextMessage,
+}
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Unsupported dialect revision")]
@@ -57,8 +64,8 @@ pub enum Error {
     CompressionError(#[from] crate::compression::CompressionError),
     #[error("Message processing failed. {0}")]
     MessageProcessingError(String),
-    #[error("Operation timed out: {0}, took >{1:?}")]
-    OperationTimeout(String, std::time::Duration),
+    #[error("Operation timed out: {0:?}, took >{1:?}")]
+    OperationTimeout(TimedOutTask, std::time::Duration),
     #[error("Lock error.")]
     LockError,
     #[cfg(feature = "async")]

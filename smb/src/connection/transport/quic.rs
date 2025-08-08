@@ -3,9 +3,9 @@
 //! This module uses the [quinn](https://docs.rs/quinn/latest/quinn/) crate to implement the QUIC transport protocol for SMB.
 //! Therefore, it should only be used when async features are enabled.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
-use crate::connection::QuicConfig;
+use crate::{connection::QuicConfig, error::*};
 
 use super::{
     traits::{SmbTransport, SmbTransportRead, SmbTransportWrite},
@@ -16,16 +16,18 @@ use futures_util::FutureExt;
 use quinn::{Endpoint, crypto::rustls::QuicClientConfig};
 use rustls::pki_types::CertificateDer;
 use rustls_platform_verifier::ConfigVerifierExt;
+use tokio::select;
 
 pub struct QuicTransport {
     recv_stream: Option<quinn::RecvStream>,
     send_stream: Option<quinn::SendStream>,
 
     endpoint: Endpoint,
+    timeout: Duration,
 }
 
 impl QuicTransport {
-    pub fn new(quic_config: &QuicConfig) -> crate::Result<Self> {
+    pub fn new(quic_config: &QuicConfig, timeout: Duration) -> crate::Result<Self> {
         rustls::crypto::ring::default_provider()
             .install_default()
             .expect("Failed to install rustls crypto provider");
@@ -38,6 +40,7 @@ impl QuicTransport {
             recv_stream: None,
             send_stream: None,
             endpoint,
+            timeout,
         })
     }
 
@@ -72,6 +75,29 @@ impl QuicTransport {
         )))
     }
 
+    async fn inner_connect(&mut self, server: &str) -> crate::Result<()> {
+        let server_addr = TransportUtils::parse_socket_address(server)?;
+        let server_name = TransportUtils::get_server_name(server)?;
+        let connection = self
+            .endpoint
+            .connect(server_addr, &server_name)?
+            .await
+            .map_err(|e| match e {
+                quinn::ConnectionError::TimedOut => {
+                    log::error!("Connection timed out after {:?}", self.timeout);
+                    Error::OperationTimeout(TimedOutTask::QuicConnect, self.timeout)
+                }
+                _ => {
+                    log::error!("Failed to connect to {server}: {e}");
+                    e.into()
+                }
+            })?;
+        let (send, recv) = connection.open_bi().await?;
+        self.send_stream = Some(send);
+        self.recv_stream = Some(recv);
+        Ok(())
+    }
+
     pub fn can_read(&self) -> bool {
         self.recv_stream.is_some()
     }
@@ -101,14 +127,17 @@ impl QuicTransport {
 
 impl SmbTransport for QuicTransport {
     fn connect<'a>(&'a mut self, server: &'a str) -> BoxFuture<'a, crate::Result<()>> {
-        async {
-            let server_addr = TransportUtils::parse_socket_address(server)?;
-            let server_name = TransportUtils::get_server_name(server)?;
-            let connection = self.endpoint.connect(server_addr, &server_name)?;
-            let (send, recv) = connection.await?.open_bi().await?;
-            self.send_stream = Some(send);
-            self.recv_stream = Some(recv);
-            Ok(())
+        let timeout = self.timeout;
+        async move {
+            select! {
+                res = self.inner_connect(server) => {
+                    res
+                },
+                _ = tokio::time::sleep(timeout) => {
+                    log::debug!("QUIC Connection timed out after {:?}", timeout);
+                    Err(Error::OperationTimeout(TimedOutTask::QuicConnect, timeout))
+                }
+            }
         }
         .boxed()
     }
@@ -134,11 +163,13 @@ impl SmbTransport for QuicTransport {
                 recv_stream: Some(recv_stream),
                 send_stream: None,
                 endpoint: self.endpoint,
+                timeout: self.timeout,
             }),
             Box::new(Self {
                 recv_stream: None,
                 send_stream: Some(send_stream),
                 endpoint: endpoint_clone,
+                timeout: self.timeout,
             }),
         ))
     }

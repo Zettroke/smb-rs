@@ -18,7 +18,9 @@ pub fn make_transport(
     match transport {
         TransportConfig::Tcp => Ok(Box::new(tcp::TcpTransport::new(timeout))),
         #[cfg(feature = "quic")]
-        TransportConfig::Quic(quic_config) => Ok(Box::new(quic::QuicTransport::new(quic_config)?)),
+        TransportConfig::Quic(quic_config) => {
+            Ok(Box::new(quic::QuicTransport::new(quic_config, timeout)?))
+        }
         #[cfg(not(feature = "quic"))]
         TransportConfig::Quic(_) => Err(crate::Error::InvalidState(
             "Quic transport is not available in this build.".into(),

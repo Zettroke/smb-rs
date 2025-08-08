@@ -1,5 +1,6 @@
 use crate::{
     connection::{transformer::Transformer, transport::SmbTransport},
+    error::*,
     msg_handler::{IncomingMessage, OutgoingMessage, ReceiveOptions, SendMessageResult},
 };
 use std::sync::OnceLock;
@@ -62,10 +63,10 @@ impl Worker for SingleWorker {
         let mut self_mut = self.transport.lock()?;
         let transport = self_mut.get_mut().ok_or(crate::Error::NotConnected)?;
         let msg = transport.receive().map_err(|e| match e {
-            crate::Error::IoError(ioe) => {
+            Error::IoError(ioe) => {
                 if ioe.kind() == std::io::ErrorKind::WouldBlock {
-                    crate::Error::OperationTimeout(
-                        "Receive next message".into(),
+                    Error::OperationTimeout(
+                        TimedOutTask::ReceiveNextMessage,
                         self.timeout
                             .lock()
                             .map(|v| v.unwrap_or(Duration::ZERO))
