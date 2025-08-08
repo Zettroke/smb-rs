@@ -140,6 +140,7 @@ make_status! {
     ObjectNameInvalid = 0xC0000033: "Object Name Invalid",
     ObjectNameNotFound = 0xC0000034: "Object Name Not Found",
     ObjectNameCollision = 0xC0000035: "Object Name Collision",
+    SharingViloation = 0xC0000043: "Sharing Violation",
     ObjectPathNotFound = 0xC000003A: "Object Path Not Found",
     LogonFailure = 0xC000006D: "Logon Failure",
     BadImpersonationLevel = 0xC00000A5: "Bad Impersonation Level",
