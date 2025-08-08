@@ -32,7 +32,7 @@ paste = "1.0"
 url = "2.5.0"
 
 # APIs
-sspi = "0.15.12"
+sspi = "0.16.0"
 
 # Crypto
 hmac = "0.12.1"
