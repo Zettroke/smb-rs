@@ -56,6 +56,7 @@ pub async fn info(cmd: &InfoCmd, cli: &Cli) -> Result<(), Box<dyn Error>> {
             log::info!("  - Last write time: {}", info.last_write_time);
             log::info!("  - Last access time: {}", info.last_access_time);
             show_security_info(&file, cmd).await?;
+            file.close().await?;
         }
         Resource::Directory(dir) => {
             let dir = Arc::new(dir);
@@ -74,9 +75,11 @@ pub async fn info(cmd: &InfoCmd, cli: &Cli) -> Result<(), Box<dyn Error>> {
             })
             .await?;
             show_security_info(&dir, cmd).await?;
+            dir.close().await?;
         }
-        Resource::Pipe(_) => {
-            log::info!("Pipe (no information)");
+        Resource::Pipe(p) => {
+            log::info!("Pipe");
+            p.close().await?;
         }
     };
 

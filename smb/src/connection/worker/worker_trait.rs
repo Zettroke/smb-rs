@@ -34,7 +34,9 @@ pub trait Worker: Sized + std::fmt::Debug {
 
     async fn send(&self, msg: OutgoingMessage) -> crate::Result<SendMessageResult>;
 
-    /// Internal: This function is implemented to receive a single message from the server,
+    /// (Internal)
+    ///
+    /// This function is implemented to receive a single message from the server,
     /// with the specified filters.
     /// Use [`Worker::receive`] instead, if you're a user of this trait, and not an implementor.
     /// # Arguments

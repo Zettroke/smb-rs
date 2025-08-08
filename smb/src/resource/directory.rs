@@ -58,7 +58,7 @@ impl Directory {
                     file_information_class: T::CLASS_ID,
                     flags: QueryDirectoryFlags::new().with_restart_scans(restart),
                     file_index: 0,
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id()?,
                     output_buffer_length: 0x1000,
                     file_name: pattern.into(),
                 }
@@ -151,7 +151,7 @@ impl Directory {
             .handler
             .send_recvo(
                 ChangeNotifyRequest {
-                    file_id: self.file_id,
+                    file_id: self.file_id()?,
                     flags: NotifyFlags::new().with_watch_tree(recursive),
                     completion_filter: filter,
                     output_buffer_length: 1024,
@@ -205,7 +205,7 @@ impl Directory {
                 flags: QueryInfoFlags::new()
                     .with_restart_scan(true)
                     .with_return_single_entry(true),
-                file_id: self.handle.file_id,
+                file_id: self.handle.file_id()?,
                 data: GetInfoRequestData::Quota(info),
             })
             .await?

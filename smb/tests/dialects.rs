@@ -81,8 +81,13 @@ async fn test_smb_integration_dialect_encrpytion_mode(
         file.write_block(TEST_DATA, 0).await?;
 
         // Query security info (owner only)
-        file.query_security_info(AdditionalInfo::new().with_owner_security_information(true))
-            .await?
+        let r = file
+            .query_security_info(AdditionalInfo::new().with_owner_security_information(true))
+            .await?;
+
+        file.close().await?;
+
+        r
     };
 
     if security.owner_sid.is_none() {
@@ -129,45 +134,47 @@ async fn test_smb_integration_dialect_encrpytion_mode(
         //         sid: None,
         //     })
         //     .await?;
+
+        directory.close().await?;
     }
 
-    {
-        let file = client
-            .create_file(
-                &test_file_path,
-                &FileCreateArgs::make_open_existing(
-                    FileAccessMask::new()
-                        .with_delete(true)
-                        .with_file_read_data(true)
-                        .with_file_read_attributes(true),
-                ),
-            )
-            .await?
-            .unwrap_file();
+    let file = client
+        .create_file(
+            &test_file_path,
+            &FileCreateArgs::make_open_existing(
+                FileAccessMask::new()
+                    .with_delete(true)
+                    .with_file_read_data(true)
+                    .with_file_read_attributes(true),
+            ),
+        )
+        .await?
+        .unwrap_file();
 
-        // So anyway it will be deleted at the end.
-        file.set_file_info(FileDispositionInformation {
-            delete_pending: true.into(),
-        })
-        .await?;
+    // So anyway it will be deleted at the end.
+    file.set_file_info(FileDispositionInformation {
+        delete_pending: true.into(),
+    })
+    .await?;
 
-        let mut buf = [0u8; TEST_DATA.len() + 2];
-        let read_length = file.read_block(&mut buf, 0, false).await?;
-        assert_eq!(read_length, TEST_DATA.len());
-        assert_eq!(&buf[..read_length], TEST_DATA);
+    let mut buf = [0u8; TEST_DATA.len() + 2];
+    let read_length = file.read_block(&mut buf, 0, false).await?;
+    assert_eq!(read_length, TEST_DATA.len());
+    assert_eq!(&buf[..read_length], TEST_DATA);
 
-        // Query file info.
-        let all_info = file.query_info::<FileAllInformation>().await?;
-        assert_eq!(
-            all_info.name.file_name.to_string(),
-            "\\".to_string() + TEST_FILE
-        );
+    // Query file info.
+    let all_info = file.query_info::<FileAllInformation>().await?;
+    assert_eq!(
+        all_info.name.file_name.to_string(),
+        "\\".to_string() + TEST_FILE
+    );
 
-        // Query filesystem info.
-        file.query_fs_info::<FileFsSizeInformation>().await?;
+    // Query filesystem info.
+    file.query_fs_info::<FileFsSizeInformation>().await?;
 
-        assert_eq!(all_info.standard.end_of_file, TEST_DATA.len() as u64);
-    }
+    assert_eq!(all_info.standard.end_of_file, TEST_DATA.len() as u64);
+
+    file.close().await?;
 
     Ok(())
 }

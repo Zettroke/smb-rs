@@ -26,6 +26,7 @@ async fn do_test_basic_integration(
     file.set_file_info(FileDispositionInformation::default())
         .await?;
 
+    file.close().await?;
     Ok(())
 }
 

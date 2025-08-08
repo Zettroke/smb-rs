@@ -42,25 +42,23 @@ async fn test_smb_iterating_long_directory() -> Result<(), Box<dyn std::error::E
     let client = Arc::new(Mutex::new(client));
     let long_dir_path = share_path.clone().with_path(LONG_DIR.to_string());
     // Mkdir
-    {
-        client
-            .lock()
-            .await
-            .unwrap()
-            .create_file(
-                &long_dir_path,
-                &FileCreateArgs::make_create_new(
-                    FileAttributes::new().with_directory(true),
-                    CreateOptions::new().with_directory_file(true),
-                ),
-            )
-            .await?;
-    }
+    client
+        .lock()
+        .await
+        .unwrap()
+        .create_file(
+            &long_dir_path,
+            &FileCreateArgs::make_create_new(
+                FileAttributes::new().with_directory(true),
+                CreateOptions::new().with_directory_file(true),
+            ),
+        )
+        .await?;
 
     // Create NUM_ITEMS files
     for i in 0..NUM_ITEMS {
         let file_name = format!("{}\\file_{}", LONG_DIR, i);
-        client
+        let file = client
             .lock()
             .await
             .unwrap()
@@ -70,89 +68,86 @@ async fn test_smb_iterating_long_directory() -> Result<(), Box<dyn std::error::E
             )
             .await?
             .unwrap_file();
+        file.close().await?;
     }
 
     // Query directory and make sure our files exist there, delete each file found.
-    {
-        let directory = client
-            .lock()
-            .await
-            .unwrap()
-            .create_file(
-                &long_dir_path,
-                &FileCreateArgs::make_open_existing(
-                    DirAccessMask::new()
-                        .with_list_directory(true)
-                        .with_synchronize(true)
-                        .into(),
-                ),
-            )
-            .await?
-            .unwrap_dir();
-        let directory = Arc::new(directory);
-        let found =
-            Directory::query_directory::<FileFullDirectoryInformation>(&directory, "file_*")
-                .await?
-                .fold(0, |sum, entry| {
-                    let client = client.clone();
-                    let share_path = share_path.clone();
-                    async move {
-                        let entry = entry.unwrap();
-                        let file_name = entry.file_name.to_string();
-                        assert!(file_name.starts_with("file_"));
-                        let file_number: usize = file_name[5..].parse().unwrap();
-                        assert!(file_number < NUM_ITEMS);
+    let directory = client
+        .lock()
+        .await
+        .unwrap()
+        .create_file(
+            &long_dir_path,
+            &FileCreateArgs::make_open_existing(
+                DirAccessMask::new()
+                    .with_list_directory(true)
+                    .with_synchronize(true)
+                    .into(),
+            ),
+        )
+        .await?
+        .unwrap_dir();
+    let directory = Arc::new(directory);
+    let found = Directory::query_directory::<FileFullDirectoryInformation>(&directory, "file_*")
+        .await?
+        .fold(0, |sum, entry| {
+            let client = client.clone();
+            let share_path = share_path.clone();
+            async move {
+                let entry = entry.unwrap();
+                let file_name = entry.file_name.to_string();
+                assert!(file_name.starts_with("file_"));
+                let file_number: usize = file_name[5..].parse().unwrap();
+                assert!(file_number < NUM_ITEMS);
 
-                        // .. And delete the file!
-                        let full_file_path =
-                            share_path.with_path(format!("{}\\{}", LONG_DIR, file_name));
-                        let file = client
-                            .lock()
-                            .await
-                            .unwrap()
-                            .create_file(
-                                &full_file_path,
-                                &FileCreateArgs::make_open_existing(
-                                    FileAccessMask::new()
-                                        .with_generic_read(true)
-                                        .with_delete(true),
-                                ),
-                            )
-                            .await
-                            .unwrap()
-                            .unwrap_file();
-                        file.set_file_info(FileDispositionInformation {
-                            delete_pending: true.into(),
-                        })
-                        .await
-                        .unwrap();
-                        sum + 1
-                    }
+                // .. And delete the file!
+                let full_file_path = share_path.with_path(format!("{}\\{}", LONG_DIR, file_name));
+                let file = client
+                    .lock()
+                    .await
+                    .unwrap()
+                    .create_file(
+                        &full_file_path,
+                        &FileCreateArgs::make_open_existing(
+                            FileAccessMask::new()
+                                .with_generic_read(true)
+                                .with_delete(true),
+                        ),
+                    )
+                    .await
+                    .unwrap()
+                    .unwrap_file();
+                file.set_file_info(FileDispositionInformation {
+                    delete_pending: true.into(),
                 })
-                .await;
-        assert_eq!(found, NUM_ITEMS);
-    }
+                .await
+                .unwrap();
+                file.close().await.unwrap();
+                sum + 1
+            }
+        })
+        .await;
+
+    assert_eq!(found, NUM_ITEMS);
+    directory.close().await?;
 
     // Cleanup
-    {
-        let directory = Arc::new(
-            client
-                .lock()
-                .await
-                .unwrap()
-                .create_file(
-                    &long_dir_path,
-                    &FileCreateArgs::make_open_existing(FileAccessMask::new().with_delete(true)),
-                )
-                .await?
-                .unwrap_dir(),
-        );
-        directory
-            .set_file_info(FileDispositionInformation {
-                delete_pending: true.into(),
-            })
-            .await?;
-    }
+    let directory = client
+        .lock()
+        .await
+        .unwrap()
+        .create_file(
+            &long_dir_path,
+            &FileCreateArgs::make_open_existing(FileAccessMask::new().with_delete(true)),
+        )
+        .await?
+        .unwrap_dir();
+    directory
+        .set_file_info(FileDispositionInformation {
+            delete_pending: true.into(),
+        })
+        .await?;
+    directory.close().await?;
     // Wait for the delete to be processed
 
     Ok(())

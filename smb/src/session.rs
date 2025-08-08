@@ -227,7 +227,9 @@ impl Session {
         ))
     }
 
-    /// *Internal:* Connects to the specified tree using the current session.
+    /// (Internal)
+    ///
+    ///  Connects to the specified tree using the current session.
     #[maybe_async]
     async fn do_tree_connect(&self, name: &str, dfs: bool) -> crate::Result<Tree> {
         Tree::connect(name, &self.handler, &self.conn_info, dfs).await

@@ -59,11 +59,14 @@ smb.share_connect(&unc_path, "username", "password".to_string()).await?;
 
 Opening a file for reading:
 ```rust
-let file: smb::File = smb.create_file(&unc_path, 
+let mut file: smb::File = smb.create_file(&unc_path, 
     &FileCreateArgs::make_open_existing(
         FileAccessMask::new().with_generic_read(true),
-)).try_into()?;
-// .. perform operations on the file
+)).await.try_into()?;
+
+// .. do some things with the file
+
+file.close().await?; // don't forget to close it!
 ```
 
 >[!tip]

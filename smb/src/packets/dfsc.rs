@@ -259,7 +259,9 @@ pub enum EntryV3Value {
 }
 
 impl EntryV3Value {
-    /// Internal: The offset of EntryV3Value from the beginning of the [`ReferralEntry`] structure.
+    /// (Internal)
+    ///
+    /// The offset of EntryV3Value from the beginning of the [`ReferralEntry`] structure.
     /// This is used to calculate the offsets of the fields in the structure.
     const OFFSET_FROM_ENTRY_START: u16 =
         (ReferralEntry::COMMON_PART_SIZE + ReferralEntryValueV3::COMMON_PART_SIZE) as u16;

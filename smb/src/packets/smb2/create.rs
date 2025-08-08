@@ -1,5 +1,6 @@
 //! Create & Close (files) requests and responses.
 
+use std::fmt::{Debug, Display};
 use std::io::{Cursor, SeekFrom};
 
 use super::header::Status;
@@ -12,7 +13,7 @@ use modular_bitfield::prelude::*;
 
 /// 2.2.14.1: SMB2_FILEID
 #[binrw::binrw]
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+#[derive(PartialEq, Eq, Clone, Copy, Default)]
 pub struct FileId {
     pub persistent: u64,
     pub volatile: u64,
@@ -43,6 +44,18 @@ impl From<Guid> for FileId {
         let mut cursor = Cursor::new(Vec::new());
         guid.write_le(&mut cursor).unwrap();
         <Self as From<[u8; 16]>>::from(cursor.into_inner().try_into().unwrap())
+    }
+}
+
+impl Display for FileId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{{:x}|{:x}}}", self.persistent, self.volatile)
+    }
+}
+
+impl Debug for FileId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FileId({})", self)
     }
 }
 
