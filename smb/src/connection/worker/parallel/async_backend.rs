@@ -54,7 +54,7 @@ impl AsyncBackend {
         log::debug!("Cleaning up worker loop.");
         if let Ok(mut state) = worker.state.lock().await {
             for (_, tx) in state.awaiting.drain() {
-                tx.send(Err(Error::NotConnected)).unwrap();
+                let _notify_result = tx.send(Err(Error::NotConnected));
             }
         }
     }
