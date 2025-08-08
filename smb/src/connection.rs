@@ -51,7 +51,10 @@ impl Connection {
         config.validate()?;
         let client_guid = config.client_guid.unwrap_or_else(Guid::generate);
         Ok(Connection {
-            handler: HandlerReference::new(ConnectionMessageHandler::new(client_guid)),
+            handler: HandlerReference::new(ConnectionMessageHandler::new(
+                client_guid,
+                config.credits_backlog,
+            )),
             config,
             server: server.to_string(),
         })
@@ -450,7 +453,7 @@ pub struct ConnectionMessageHandler {
 
     /// The number of extra credits to be requested by the client
     /// to enable larger requests/multiple outstanding requests.
-    extra_credits_to_request: u16,
+    credits_backlog: u16,
 
     worker: OnceCell<Arc<WorkerImpl>>,
 
@@ -477,12 +480,12 @@ pub struct ConnectionMessageHandler {
 }
 
 impl ConnectionMessageHandler {
-    fn new(client_guid: Guid) -> ConnectionMessageHandler {
+    fn new(client_guid: Guid, credits_backlog: Option<u16>) -> ConnectionMessageHandler {
         ConnectionMessageHandler {
             client_guid,
             worker: OnceCell::new(),
             conn_info: OnceCell::new(),
-            extra_credits_to_request: 4,
+            credits_backlog: credits_backlog.unwrap_or(128),
             curr_credits: Semaphore::new(1),
             curr_msg_id: AtomicU64::new(0),
             credit_pool: AtomicU16::new(1),
@@ -529,8 +532,8 @@ impl ConnectionMessageHandler {
                 let mut request = cost;
                 // Request additional credits if required: if balance < extra, add to request the diff:
                 let current_pool_size = self.credit_pool.load(Ordering::SeqCst);
-                if current_pool_size < self.extra_credits_to_request {
-                    request += self.extra_credits_to_request - current_pool_size;
+                if current_pool_size < self.credits_backlog {
+                    request += self.credits_backlog - current_pool_size;
                 }
 
                 msg.message.header.credit_charge = cost;

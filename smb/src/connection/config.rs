@@ -143,6 +143,10 @@ pub struct ConnectionConfig {
     /// Configures valid authentication methods (SSPs) for the connection.
     /// See [`AuthMethodsConfig`] for more information.
     pub auth_methods: AuthMethodsConfig,
+
+    /// The number of SMB2 credits to use for the connection.
+    /// If not configured, uses a default value.
+    pub credits_backlog: Option<u16>,
 }
 
 impl ConnectionConfig {
