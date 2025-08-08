@@ -26,6 +26,7 @@ type Upstream = HandlerReference<ConnectionMessageHandler>;
 mod authenticator;
 mod encryptor_decryptor;
 mod signer;
+mod sspi_network_client;
 mod state;
 
 use authenticator::{AuthenticationStep, Authenticator};
@@ -58,7 +59,10 @@ impl Session {
         };
         // Build the authenticator.
         let mut authenticator = Authenticator::build(identity, conn_info)?;
-        let next_buf = match authenticator.next(&conn_info.negotiation.auth_buffer)? {
+        let next_buf = match authenticator
+            .next(&conn_info.negotiation.auth_buffer)
+            .await?
+        {
             AuthenticationStep::NextToken(buf) => buf,
             AuthenticationStep::Complete => {
                 return Err(Error::InvalidState(
@@ -143,8 +147,8 @@ impl Session {
         // While there's a response to process, do so.
         while !authenticator.is_authenticated()? {
             let next_buf = match last_setup_response.as_ref() {
-                Some(response) => authenticator.next(&response.buffer)?,
-                None => authenticator.next(&[])?,
+                Some(response) => authenticator.next(&response.buffer).await?,
+                None => authenticator.next(&[]).await?,
             };
             let is_auth_done = authenticator.is_authenticated()?;
 

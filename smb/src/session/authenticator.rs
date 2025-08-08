@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
+use crate::Error;
+use crate::connection::AuthMethodsConfig;
+use crate::connection::connection_info::ConnectionInfo;
+use maybe_async::*;
 use sspi::{
     AcquireCredentialsHandleResult, AuthIdentity, BufferType, ClientRequestFlags, CredentialUse,
     DataRepresentation, InitializeSecurityContextResult, Negotiate, SecurityBuffer, Sspi,
     ntlm::NtlmConfig,
 };
 use sspi::{CredentialsBuffers, NegotiateConfig, SspiImpl};
-
-use crate::Error;
-use crate::connection::AuthMethodsConfig;
-use crate::connection::connection_info::ConnectionInfo;
 
 #[derive(Debug)]
 pub struct Authenticator {
@@ -36,7 +36,7 @@ impl Authenticator {
             .as_ref()
             .unwrap_or(&String::from("smb-rs"))
             .clone();
-        let mut negotiate_ssp = Negotiate::new(NegotiateConfig::new(
+        let mut negotiate_ssp = Negotiate::new_client(NegotiateConfig::new(
             Box::new(NtlmConfig::default()),
             Some(Self::get_available_ssp_pkgs(&conn_info.config.auth_methods)),
             client_computer_name,
@@ -83,7 +83,8 @@ impl Authenticator {
 
     const SSPI_REQ_DATA_REPRESENTATION: DataRepresentation = DataRepresentation::Native;
 
-    pub fn next(&mut self, gss_token: &[u8]) -> crate::Result<AuthenticationStep> {
+    #[maybe_async]
+    pub async fn next(&mut self, gss_token: &[u8]) -> crate::Result<AuthenticationStep> {
         if self.is_authenticated()? {
             return Ok(AuthenticationStep::Complete);
         }
@@ -119,9 +120,22 @@ impl Authenticator {
             // Kerberos requires a network client to be set up.
             // We avoid compiling with the network client if kerberos is not enabled,
             // so be sure to avoid using it in that case.
+            // while default, sync network client is supported in sspi,
+            // an implementation of the async one had to be added in this module.
             #[cfg(feature = "kerberos")]
             {
-                generator.resolve_with_default_network_client()?
+                #[cfg(feature = "async")]
+                {
+                    use super::sspi_network_client::ReqwestNetworkClient;
+                    generator
+                        .resolve_with_async_client(&mut ReqwestNetworkClient::new())
+                        .await?
+                }
+                #[cfg(not(feature = "async"))]
+                {
+                    use sspi::network_client::reqwest_network_client::ReqwestNetworkClient;
+                    generator.resolve_with_client(&ReqwestNetworkClient {})?
+                }
             }
             #[cfg(not(feature = "kerberos"))]
             {
