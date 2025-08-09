@@ -155,7 +155,7 @@ impl File {
 
         let response = self
             .handle
-            .send_receive(
+            .send_recvo(
                 WriteRequest {
                     offset: pos,
                     file_id: self.handle.file_id().map_err(std::io::Error::other)?,
@@ -163,6 +163,7 @@ impl File {
                     buffer: buf.to_vec(),
                 }
                 .into(),
+                ReceiveOptions::new().with_allow_async(true),
             )
             .await
             .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -186,11 +187,12 @@ impl File {
     pub async fn flush(&self) -> std::io::Result<()> {
         let _response = self
             .handle
-            .send_receive(
+            .send_recvo(
                 FlushRequest {
                     file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                 }
                 .into(),
+                ReceiveOptions::new().with_allow_async(true),
             )
             .await
             .map_err(|e| std::io::Error::other(e.to_string()))?;

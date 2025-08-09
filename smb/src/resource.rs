@@ -130,7 +130,9 @@ impl Resource {
         // Make sure to set DFS if required.
         msg.message.header.flags.set_dfs_operation(is_dfs);
 
-        let response = upstream.sendo_recv(msg).await?;
+        let response = upstream
+            .sendo_recvo(msg, ReceiveOptions::new().with_allow_async(true))
+            .await?;
 
         let response = response.message.content.to_create()?;
         log::info!("Created file '{}', ({:?})", name, response.file_id);
