@@ -73,11 +73,6 @@ impl File {
             ));
         }
 
-        // EOF
-        if pos >= self.end_of_file {
-            return Ok(0);
-        }
-
         log::debug!(
             "Reading up to {} bytes at offset {} from {}",
             buf.len(),
