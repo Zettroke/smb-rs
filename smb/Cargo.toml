@@ -93,7 +93,7 @@ sign = ["sign_gmac", "sign_cmac", "sign_hmac"]
 quic = ["dep:quinn", "dep:rustls", "dep:rustls-platform-verifier"]
 
 # Kerberos
-kerberos = ["sspi/network_client"]
+kerberos = ["sspi/network_client", "sspi/dns_resolver"]
 
 [package.metadata.docs.rs]
 features = ["async", "sign", "encrypt", "compress"]
