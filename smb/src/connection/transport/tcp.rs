@@ -2,6 +2,7 @@ use super::{
     traits::{SmbTransport, SmbTransportRead, SmbTransportWrite},
     utils::TransportUtils,
 };
+use crate::error::*;
 
 use std::net::SocketAddr;
 
@@ -61,7 +62,16 @@ impl TcpTransport {
         }
 
         log::debug!("Connecting to {endpoint} with timeout {:?}.", self.timeout);
-        TcpStream::connect_timeout(endpoint, self.timeout).map_err(Into::into)
+        TcpStream::connect_timeout(endpoint, self.timeout).map_err(|e| match e.kind() {
+            io::ErrorKind::TimedOut => {
+                log::error!("Connection timed out after {:?}", self.timeout);
+                Error::OperationTimeout(TimedOutTask::TcpConnect, self.timeout)
+            }
+            _ => {
+                log::error!("Failed to connect to {endpoint}: {e}");
+                e.into()
+            }
+        })
     }
 
     /// Connects to a NetBios server in the specified endpoint with a timeout.
@@ -77,8 +87,8 @@ impl TcpTransport {
         select! {
             res = TcpStream::connect(&endpoint) => res.map_err(Into::into),
             _ = tokio::time::sleep(self.timeout) => Err(
-                crate::Error::OperationTimeout(
-                    format!("Tcp connect to {endpoint}"), self.timeout
+                Error::OperationTimeout(
+                    TimedOutTask::TcpConnect, self.timeout
                 )
             ),
         }

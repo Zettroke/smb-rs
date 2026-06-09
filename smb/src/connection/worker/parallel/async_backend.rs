@@ -1,6 +1,6 @@
 use crate::connection::transport::traits::{SmbTransport, SmbTransportRead, SmbTransportWrite};
 use crate::msg_handler::IncomingMessage;
-use crate::{Error, sync_helpers::*};
+use crate::{error::*, sync_helpers::*};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::{select, sync::oneshot};
@@ -54,7 +54,7 @@ impl AsyncBackend {
         log::debug!("Cleaning up worker loop.");
         if let Ok(mut state) = worker.state.lock().await {
             for (_, tx) in state.awaiting.drain() {
-                tx.send(Err(Error::NotConnected)).unwrap();
+                let _notify_result = tx.send(Err(Error::NotConnected));
             }
         }
     }
@@ -201,7 +201,7 @@ impl MultiWorkerBackend for AsyncBackend {
                     msg.map_err(|_| Error::MessageProcessingError("Failed to receive message.".to_string()))?
                 },
                 _ = tokio::time::sleep(timeout) => {
-                    Err(Error::OperationTimeout("Waiting for message receive.".to_string(), timeout))
+                    Err(Error::OperationTimeout(TimedOutTask::ReceiveNextMessage, timeout))
                 }
             }
         }

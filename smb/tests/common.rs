@@ -38,17 +38,13 @@ pub async fn make_server_connection(
     conn_config.auth_methods.kerberos = false;
     conn_config.auth_methods.ntlm = true;
 
-    let mut smb = Client::new(ClientConfig {
+    let smb = Client::new(ClientConfig {
         connection: conn_config,
         ..Default::default()
     });
     log::info!("Connecting to {server}");
 
-    let unc_path = UncPath {
-        server: server.clone(),
-        share: Some(share.to_string()),
-        path: None,
-    };
+    let unc_path = UncPath::new(&server)?.with_share(share)?;
     // Connect & Authenticate
     smb.share_connect(&unc_path, user.as_str(), password.clone())
         .await?;

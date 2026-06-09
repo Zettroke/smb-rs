@@ -1,5 +1,6 @@
 use crate::{
     connection::transport::{SmbTransport, SmbTransportRead, SmbTransportWrite},
+    error::*,
     sync_helpers::*,
 };
 use std::sync::Arc;
@@ -181,7 +182,7 @@ impl MultiWorkerBackend for ThreadingBackend {
 
         waiter.recv_timeout(timeout).map_err(|e| match e {
             std::sync::mpsc::RecvTimeoutError::Timeout => {
-                Error::OperationTimeout("Waiting for message receive.".to_string(), timeout)
+                Error::OperationTimeout(TimedOutTask::ReceiveNextMessage, timeout)
             }
             _ => Error::MessageProcessingError("Failed to receive message.".to_string()),
         })?

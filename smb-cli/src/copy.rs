@@ -43,7 +43,7 @@ impl CopyFile {
     #[maybe_async]
     async fn open(
         path: &Path,
-        client: &mut Client,
+        client: &Client,
         cli: &Cli,
         cmd: &CopyCmd,
         read: bool,
@@ -103,9 +103,10 @@ impl CopyFile {
             Remote(from_remote) => match to.value {
                 Local(to_local) => block_copy(from_remote, to_local, 16).await?,
                 Remote(to_remote) => {
-                    if to.path.as_remote().unwrap().server == self.path.as_remote().unwrap().server
-                        && to.path.as_remote().unwrap().share
-                            == self.path.as_remote().unwrap().share
+                    if to.path.as_remote().unwrap().server()
+                        == self.path.as_remote().unwrap().server()
+                        && to.path.as_remote().unwrap().share()
+                            == self.path.as_remote().unwrap().share()
                     {
                         // Use server-side copy if both files are on the same server
                         to_remote.srv_copy(&from_remote).await?
@@ -125,9 +126,9 @@ pub async fn copy(cmd: &CopyCmd, cli: &Cli) -> Result<(), Box<dyn Error>> {
         return Err("Copying between two local files is not supported".into());
     }
 
-    let mut client = Client::new(cli.make_smb_client_config());
-    let from = CopyFile::open(&cmd.from, &mut client, cli, cmd, true).await?;
-    let to = CopyFile::open(&cmd.to, &mut client, cli, cmd, false).await?;
+    let client = Client::new(cli.make_smb_client_config());
+    let from = CopyFile::open(&cmd.from, &client, cli, cmd, true).await?;
+    let to = CopyFile::open(&cmd.to, &client, cli, cmd, false).await?;
     from.copy_to(to).await?;
 
     Ok(())

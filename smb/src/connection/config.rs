@@ -39,7 +39,7 @@ pub struct QuicConfig {
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum QuicCertValidationOptions {
     /// Use the default platform verifier for the certificate.
-    /// See [quinn::ClientConfig::with_platform_verifier].
+    /// See `quinn::ClientConfig::with_platform_verifier`.
     /// This is the default option.
     #[default]
     PlatformVerifier,
@@ -143,6 +143,10 @@ pub struct ConnectionConfig {
     /// Configures valid authentication methods (SSPs) for the connection.
     /// See [`AuthMethodsConfig`] for more information.
     pub auth_methods: AuthMethodsConfig,
+
+    /// The number of SMB2 credits to use for the connection.
+    /// If not configured, uses a default value.
+    pub credits_backlog: Option<u16>,
 }
 
 impl ConnectionConfig {

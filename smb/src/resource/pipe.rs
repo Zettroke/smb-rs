@@ -18,10 +18,6 @@ impl Pipe {
         Pipe { handle }
     }
 
-    pub fn handle(&self) -> &ResourceHandle {
-        &self.handle
-    }
-
     #[maybe_async]
     pub async fn bind<I>(self) -> crate::Result<I>
     where
@@ -166,6 +162,7 @@ impl PipeRpcConnection {
         to_send: DcRpcCoPktRequestContent,
     ) -> crate::Result<DceRpcCoResponsePkt> {
         const READ_WRITE_PIPE_OFFSET: u64 = 0;
+        let file_id = pipe.handle.file_id()?;
         let dcerpc_request_buffer: Vec<u8> = DceRpcCoRequestPkt::new(
             to_send,
             call_id,
@@ -180,7 +177,7 @@ impl PipeRpcConnection {
             .send_recvo(
                 WriteRequest {
                     offset: READ_WRITE_PIPE_OFFSET,
-                    file_id: pipe.handle.file_id,
+                    file_id,
                     flags: Default::default(),
                     buffer: dcerpc_request_buffer,
                 }
@@ -200,7 +197,7 @@ impl PipeRpcConnection {
                     flags: Default::default(),
                     length: 1024,
                     offset: READ_WRITE_PIPE_OFFSET,
-                    file_id: pipe.handle.file_id,
+                    file_id,
                     minimum_count: DceRpcCoRequestPkt::COMMON_SIZE_BYTES as u32,
                 }
                 .into(),

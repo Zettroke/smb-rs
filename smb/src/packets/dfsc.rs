@@ -2,7 +2,7 @@ use super::binrw_util::prelude::{PosMarker, SizedWideString};
 use binrw::{NullWideString, io::TakeSeekExt, prelude::*};
 use modular_bitfield::prelude::*;
 
-/// [MS-DFSC 2.2.2][https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dfsc/663c9b38-41b8-4faa-b6f6-a4576b4cea62]:
+/// [MS-DFSC 2.2.2](<https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dfsc/663c9b38-41b8-4faa-b6f6-a4576b4cea62>):
 /// DFS referral requests are sent in the form of an REQ_GET_DFS_REFERRAL message, by using an appropriate transport as specified in section 2.1.
 #[binrw::binrw]
 #[derive(Debug, PartialEq, Eq)]
@@ -259,7 +259,9 @@ pub enum EntryV3Value {
 }
 
 impl EntryV3Value {
-    /// Internal: The offset of EntryV3Value from the beginning of the [`ReferralEntry`] structure.
+    /// (Internal)
+    ///
+    /// The offset of EntryV3Value from the beginning of the [`ReferralEntry`] structure.
     /// This is used to calculate the offsets of the fields in the structure.
     const OFFSET_FROM_ENTRY_START: u16 =
         (ReferralEntry::COMMON_PART_SIZE + ReferralEntryValueV3::COMMON_PART_SIZE) as u16;

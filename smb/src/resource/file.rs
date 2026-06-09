@@ -5,8 +5,6 @@ use std::io::prelude::*;
 use std::ops::{Deref, DerefMut};
 
 /// An opened file on the server.
-/// This struct also represents an open named pipe or a printer. use [File::file_type] to
-/// determine the type of the share this file belongs to.
 ///
 /// # [std::io] Support
 /// The [File] struct also supports the [Read][std::io::Read] and [Write][std::io::Write] traits.
@@ -18,7 +16,7 @@ use std::ops::{Deref, DerefMut};
 /// Since we would NOT like to call a tokio task from a blocking context, these traits are **NOT** implemented in the async context!
 ///
 /// You may not directly create this struct. Instead, use the [Tree::create][crate::tree::Tree::create] method to gain
-/// a proper handle against the server in the shape of a [Resource][crate::resource::Resource], that can be then converted to a [File].
+/// a proper handle against the server in the shape of a [Resource], that can be then converted to a [File].
 pub struct File {
     handle: ResourceHandle,
 
@@ -98,7 +96,7 @@ impl File {
                     flags,
                     length: buf.len() as u32,
                     offset: pos,
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                     minimum_count: 1,
                 }
                 .into(),
@@ -150,14 +148,15 @@ impl File {
 
         let response = self
             .handle
-            .send_receive(
+            .send_recvo(
                 WriteRequest {
                     offset: pos,
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                     flags: WriteFlags::new(),
                     buffer: buf.to_vec(),
                 }
                 .into(),
+                ReceiveOptions::new().with_allow_async(true),
             )
             .await
             .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -181,11 +180,12 @@ impl File {
     pub async fn flush(&self) -> std::io::Result<()> {
         let _response = self
             .handle
-            .send_receive(
+            .send_recvo(
                 FlushRequest {
-                    file_id: self.handle.file_id,
+                    file_id: self.handle.file_id().map_err(std::io::Error::other)?,
                 }
                 .into(),
+                ReceiveOptions::new().with_allow_async(true),
             )
             .await
             .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -352,7 +352,7 @@ impl GetLen for File {
 impl SetLen for File {
     #[maybe_async]
     async fn set_len(&self, len: u64) -> crate::Result<()> {
-        self.set_file_info(FileEndOfFileInformation { end_of_file: len })
+        self.set_info(FileEndOfFileInformation { end_of_file: len })
             .await
     }
 }

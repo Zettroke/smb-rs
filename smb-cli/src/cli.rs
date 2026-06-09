@@ -1,4 +1,4 @@
-use crate::{copy::CopyCmd, info::InfoCmd};
+use crate::{copy::CopyCmd, info::InfoCmd, security::SecurityCmd};
 use clap::{Parser, Subcommand, ValueEnum};
 use smb::{
     ClientConfig, ConnectionConfig,
@@ -38,7 +38,7 @@ pub struct Cli {
     #[arg(short, long)]
     pub password: String,
 
-    /// [DANGEROUS] Disables message signing.
+    /// Disables message signing.
     /// This may should only be used when logging in with a guest user.
     #[arg(long)]
     pub disable_message_signing: bool,
@@ -95,4 +95,6 @@ pub enum Commands {
     Copy(CopyCmd),
     /// Retrieves information about a share or a path.
     Info(InfoCmd),
+    /// Configures object security
+    Security(SecurityCmd),
 }

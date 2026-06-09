@@ -121,6 +121,10 @@ impl Semaphore {
         *guard += count as u32;
         self.condvar.notify_all();
     }
+
+    pub fn available_permits(&self) -> usize {
+        *self.inner.lock().unwrap() as usize
+    }
 }
 
 #[cfg(not(feature = "async"))]
